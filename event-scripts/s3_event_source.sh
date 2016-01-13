@@ -20,7 +20,7 @@ if [ -s /tmp/s3_event.$$ ]; then
 else
   echo "ERROR - failed to modify function ARN in json file $EVENT_SRC"
   RETCODE=1
-  rm /tmp.s3_evemt.$$
+  rm /tmp/s3_event.$$
 fi
 
   if [ $RETCODE -eq 0 ]; then
