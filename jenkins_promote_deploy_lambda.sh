@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # This script is called locally (later from jenkins) to promote and deploy a Lambda function
-#
 
 #TODO
-
-#EVENTS, what in the heck 
+# EVENTS
+#   -Better yaml parsing
+#   -Add parameters struct to array?
 
 
 #CURRENT ISSUES / QUESTIONS
@@ -13,16 +13,19 @@
 
 RETCODE=0
 BUILD_PATH="/Users/jseed/Projects/LambdaFunction"
-TRUST_POLICY_SRC='/Users/jseed/Projects/LambdaFunction/deploy/trust_policy.lam.json'
-
+TRUST_POLICY_SRC="${BUILD_PATH}/deploy/trust_policy.lam.json"
 echo "BUILD_PATH set to $BUILD_PATH"
+LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
+
+BUCKET="jon-test-bucket"
+
+
 # TEST BUILD
 cd $BUILD_PATH
 rm JonTestFunction.zip
 zip JonTestFunction.zip JonTestFunction.js
-cd ../PromoteLambda
 
-LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
+
 
 #Check if deployment rules exist
 if [ -e "$LAM_DEPLOY_RULES" ]; then
@@ -65,7 +68,7 @@ if [ $RETCODE -eq 0 ]; then
 
   # RUNTIME and ARTIFACT_PATH need to be fixed for proper building
   if [ "${RUNTIME}" == 'nodejs' ]; then
-    HANDLER=${FUNCTION_NAME}.${HANDLER}
+    HANDLER=${FUNCTION_NAME}.handler
   fi
 
 
@@ -93,7 +96,7 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
-
+# Update for event permissions? depends.
 if [ $RETCODE -eq 0 ]; then
   echo "*** Checking IAM for role $ROLE_NAME"
   ROLE_RESP=$(aws iam get-role --role-name ${ROLE_NAME})
@@ -162,12 +165,12 @@ if [ $RETCODE -eq 0 ]; then
   echo
 
   echo "*** Checking lambda for function $FUNCTION_NAME"
-  FUNCTION_RESPONSE=$(aws lambda get-'function' --function-name ${FUNCTION_NAME})
+  FUNCTION_CHECK=$(aws lambda get-'function' --function-name ${FUNCTION_NAME})
 
   if [ $? -eq 0 ]; then
     echo "Function found"
     echo "*** Updating code for function ${FUNCTION_NAME}"
-    UPDATE_CODE_RESPONSE=$(aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://${ARTIFACT_PATH} )
+    FUNCTION_RESPONSE=$(aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://${ARTIFACT_PATH} )
 
     if [ $? -eq 0 ]; then
       echo "Successfully updated function code"
@@ -177,7 +180,7 @@ if [ $RETCODE -eq 0 ]; then
     fi
     if [ $RETCODE -eq 0 ]; then
       echo "*** Updating configuration for function ${FUNCTION_NAME}"
-      UPDATE_CONFIG_RESPONSE=$(aws lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER})
+      FUNCTION_CONFIG_RESPONSE=$(aws lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER})
       if [ $? -eq 0 ]; then
         echo "Successfully updated function configuration"
       else
@@ -189,7 +192,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "Function not found"
     echo "*** Creating function $FUNCTION_NAME"
-    CREATE_RESPONSE=$(aws lambda create-'function' --function-name ${FUNCTION_NAME} --description "${DESCRIPTION}" --runtime ${RUNTIME} --role ${ROLE} --handler ${HANDLER} --zip-file fileb://${ARTIFACT_PATH} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE})
+    FUNCTION_RESPONSE=$(aws lambda create-'function' --function-name ${FUNCTION_NAME} --description "${DESCRIPTION}" --runtime ${RUNTIME} --role ${ROLE} --handler ${HANDLER} --zip-file fileb://${ARTIFACT_PATH} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE})
     if [ $? -eq 0 ]; then
       echo "Successfully created function"
     else
@@ -239,5 +242,36 @@ if [ $RETCODE -eq 0 ]; then
     fi
   fi
 fi
+
+if [ $RETCODE -eq 0 ]; then
+  echo
+  echo "***********************************************************************"
+  echo "************************* EVENTS SOURCES ******************************"
+  echo "***********************************************************************"
+  echo
+
+  #**************************Events
+  echo "*** Retrieving function ARN "
+  FUNCTION_ARN=$(echo ${FUNCTION_RESPONSE} | jq -r '.["FunctionArn"]')
+  echo "Function ARN set to $FUNCTION_ARN"
+
+  #Process events from yaml file (NEEDS TO BE FIXED)
+  echo -e "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}\n"
+
+  #This is messy, better way?
+  while [ $RETCODE ] && read -r -d '' KEY SRC KEY TYPE; do
+      echo "Calling executing script at ./event-scripts/${TYPE}_event_source.sh and passing json file $SRC"
+      #Needs to be less specific
+      /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "$FUNCTION_ARN" "$BUCKET"
+      RETCODE=$?
+  done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
+
+
+#Update/Remove
+  if [ $RETCODE -eq 0 ]; then
+    echo -e "\nSuccessfully created all event sources"
+  fi
+fi
+
 
 exit $RETCODE
