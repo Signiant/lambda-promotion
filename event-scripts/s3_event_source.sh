@@ -12,6 +12,7 @@ FUNCTION_ARN=$2
 BUCKET=$3
 RETCODE=0
 
+#say whats happening
 #Insert function arn in event json file
 cat $EVENT_SRC | jq --arg ARN $FUNCTION_ARN '.["LambdaFunctionConfigurations"][]["LambdaFunctionArn"]=$ARN' > /tmp/s3_event.$$
 if [ -s /tmp/s3_event.$$ ]; then
@@ -23,7 +24,9 @@ else
   rm /tmp/s3_event.$$
 fi
 
-  if [ $RETCODE -eq 0 ]; then
+if [ $RETCODE -eq 0 ]; then
+    #How to error check? Move to function creation?
+    aws lambda add-permission --function-name $FUNCTION_ARN --region us-east-1 --statement-id s3_invoke --principal s3.amazonaws.com --action "lambda:InvokeFunction" --source-arn "arn:aws:s3:::${BUCKET}"
     NOTIFICATION_RESPONSE=$(aws s3api put-bucket-notification-configuration --bucket ${BUCKET} --notification-configuration file://$EVENT_SRC)
   if [ $? -eq 0 ]; then
     echo "Successfully created s3 bucket notification"
