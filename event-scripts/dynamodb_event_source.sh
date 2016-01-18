@@ -1,7 +1,5 @@
 #!/bin/bash
 
-
-
 EVENT_SRC=$1
 FUNCTION_ARN=$2
 TABLE_NAME=$3
@@ -78,7 +76,6 @@ if [ $RETCODE -eq 0 ]; then
       RETCODE=1
     fi
   fi
-
 fi
 
 exit $RETCODE
