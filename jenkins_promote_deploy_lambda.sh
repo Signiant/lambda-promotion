@@ -3,9 +3,6 @@
 # This script is called locally (later from jenkins) to promote and deploy a Lambda function
 
 #TODO
-# EVENTS
-#   -Better yaml parsing
-#   -Add parameters struct to array?
 
 
 #CURRENT ISSUES / QUESTIONS
@@ -256,15 +253,22 @@ if [ $RETCODE -eq 0 ]; then
   PROD_ARN="${FUNCTION_ARN}:PROD"
 
   echo "Function ARN set to $FUNCTION_ARN"
+  echo "Production ARN set to $PROD_ARN"
 
-  #Process events from yaml file (NEEDS TO BE FIXED)
-  echo -e "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}\n"
+  echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
 
   while [ $RETCODE ] && read -r -d '' KEY SRC KEY TYPE KEY PARAMETER; do
-      echo "Calling executing script at ./event-scripts/${TYPE}_event_source.sh and passing json file $SRC"
-      #Needs to be less specific
-      /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${PARAMETER}"
-      RETCODE=$?
+      echo "*** Verifying event source exists"
+      if [ -e "$SRC" ]; then
+        echo "Event source found"
+        echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh and passing json file $SRC\n"
+        #Needs to be less specific
+        /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${PARAMETER}"
+        RETCODE=$?
+      else
+        echo "ERROR - Event source not found ($SRC)"
+        RETCODE=1
+      fi
   done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
 
 
