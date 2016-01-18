@@ -10,21 +10,26 @@
 
 #CURRENT ISSUES / QUESTIONS
 # ROLES - PATH
+# ALIAS - update after events?
 
 RETCODE=0
+
+#***************************************************************
+# To be removed after added to jenkins (?)
 BUILD_PATH="/Users/jseed/Projects/LambdaFunction"
 TRUST_POLICY_SRC="${BUILD_PATH}/deploy/trust_policy.lam.json"
 echo "BUILD_PATH set to $BUILD_PATH"
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
 
-BUCKET="jon-test-bucket"
-
-
 # TEST BUILD
 cd $BUILD_PATH
-rm JonTestFunction.zip
-zip JonTestFunction.zip JonTestFunction.js
+rm JonPromoteTest.zip
+zip JonPromoteTest.zip JonPromoteTest.js
+#***************************************************************
 
+
+#Temporary - will come from config files
+BUCKET="jontestfunction-bucket"
 
 
 #Check if deployment rules exist
@@ -62,14 +67,13 @@ if [ $RETCODE -eq 0 ]; then
   INLINE_POLICY_SRC=$(cat $LAM_DEPLOY_RULES | shyaml get-value role.inline_policy_src)
   echo "INLINE_POLICY_SRC set to $INLINE_POLICY_SRC"
 
-
 fi
-if [ $RETCODE -eq 0 ]; then
 
-  # RUNTIME and ARTIFACT_PATH need to be fixed for proper building
-  if [ "${RUNTIME}" == 'nodejs' ]; then
-    HANDLER=${FUNCTION_NAME}.handler
-  fi
+if [ $RETCODE -eq 0 ]; then
+  # RUNTIME, HANDLER and ARTIFACT_PATH need to be fixed for proper building
+
+    HANDLER="${FUNCTION_NAME}.handler"
+
 
 
   ARTIFACT_PATH=${BUILD_PATH}/${FUNCTION_NAME}.zip
@@ -109,20 +113,16 @@ if [ $RETCODE -eq 0 ]; then
     echo "*** Updating trust policy for role $ROLE_NAME to trust policy at $TRUST_POLICY_SRC"
     TRUST_RESPONSE=$(aws iam update-assume-role-policy --role-name $ROLE_NAME --policy-document file://${TRUST_POLICY_SRC})
 
-
     if [ $? -eq 0 ]; then
       echo "Successfully applied trust policy"
     else
       echo "ERROR - failed to apply trust policy at $TRUST_POLICY_SRC to role $ROLE_NAME"
       RETCODE=1
     fi
-
-
   #********************** ROLE DOESNT EXIST - CREATE
   else
-
     echo "$ROLE_NAME not found"
-    echo "*** Creating role $ROLE_NAME with trust policy at ${TRUST_POLICY_SRC}"
+    echo "*** Creating role $ROLE_NAME with trust policy at $TRUST_POLICY_SRC"
     ROLE_RESP=$(aws iam create-role --role-name ${ROLE_NAME} --assume-role-policy-document file://${TRUST_POLICY_SRC})
 
     #If not successful, fail
@@ -131,7 +131,7 @@ if [ $RETCODE -eq 0 ]; then
       echo -e "***Sleeping for 5 seconds\n"
       sleep 5s
     else
-      echo "ERROR - Failed to create role $ROLE_NAME using trust policy at ${TRUST_POLICY_SRC}"
+      echo "ERROR - Failed to create role $ROLE_NAME using trust policy at $TRUST_POLICY_SRC"
       RETCODE=1
     fi
   fi
@@ -153,7 +153,7 @@ fi
 if [ $RETCODE -eq 0 ]; then
   echo "*** Setting ROLE to role arn"
   ROLE=$(echo ${ROLE_RESP} | jq -r '.["Role"]["Arn"]')
-  echo "ROLE set to $ROLE"
+  echo "ROLE set to ${ROLE}"
 fi
 
 
@@ -253,16 +253,17 @@ if [ $RETCODE -eq 0 ]; then
   #**************************Events
   echo "*** Retrieving function ARN "
   FUNCTION_ARN=$(echo ${FUNCTION_RESPONSE} | jq -r '.["FunctionArn"]')
+  PROD_ARN="${FUNCTION_ARN}:PROD"
+
   echo "Function ARN set to $FUNCTION_ARN"
 
   #Process events from yaml file (NEEDS TO BE FIXED)
   echo -e "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}\n"
 
-  #This is messy, better way?
-  while [ $RETCODE ] && read -r -d '' KEY SRC KEY TYPE; do
+  while [ $RETCODE ] && read -r -d '' KEY SRC KEY TYPE KEY PARAMETER; do
       echo "Calling executing script at ./event-scripts/${TYPE}_event_source.sh and passing json file $SRC"
       #Needs to be less specific
-      /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "$FUNCTION_ARN" "$BUCKET"
+      /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${PARAMETER}"
       RETCODE=$?
   done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
 
