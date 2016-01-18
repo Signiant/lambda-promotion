@@ -1,0 +1,21 @@
+{
+  "LambdaFunctionConfigurations": [
+    {
+      "Id": "",
+      "LambdaFunctionArn": "*",
+      "Events": [
+        ""
+      ],
+      "Filter": {
+        "Key": {
+          "FilterRules": [
+            {
+              "Name": "prefix | suffix",
+              "Value": ""
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

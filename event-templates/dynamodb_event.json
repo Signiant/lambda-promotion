@@ -1,0 +1,7 @@
+{
+  "EventSourceArn": "*",
+  "FunctionName": "*",
+  "Enabled": ,
+  "BatchSize": ,
+  "StartingPosition": 
+}
