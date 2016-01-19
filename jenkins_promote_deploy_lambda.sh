@@ -1,20 +1,12 @@
 #!/bin/bash
 
-# This script is called locally (later from jenkins) to promote and deploy a Lambda function
+# This script is called from jenkins to promote and deploy a Lambda function
 
-#TODO
+BUILD_PATH=$1
+ENVIRONMENT=$2
 
-
-#CURRENT ISSUES / QUESTIONS
-
-
-RETCODE=0
-
-#***************************************************************
-# To be removed after added to jenkins (?)
-BUILD_PATH="/Users/jseed/Projects/LambdaFunction"
-TRUST_POLICY_SRC="${BUILD_PATH}/deploy/trust_policy.lam.json"
-echo "BUILD_PATH set to $BUILD_PATH"
+POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
+TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
 
 #Check if deployment rules exist
@@ -49,7 +41,7 @@ if [ $RETCODE -eq 0 ]; then
   echo "MEMORY_SIZE set to $MEMORY_SIZE"
   TIMEOUT=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.timeout)
   echo "TIMEOUT set to $TIMEOUT"
-  INLINE_POLICY_SRC=$(cat $LAM_DEPLOY_RULES | shyaml get-value role.inline_policy_src)
+  #INLINE_POLICY_SRC=$(cat $LAM_DEPLOY_RULES | shyaml get-value role.inline_policy_src)
   echo "INLINE_POLICY_SRC set to $INLINE_POLICY_SRC"
 
 fi
