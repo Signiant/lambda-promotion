@@ -8,6 +8,7 @@ ENVIRONMENT=$2
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
+ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
 
 RETCODE=0
 
@@ -43,20 +44,13 @@ if [ $RETCODE -eq 0 ]; then
   echo "MEMORY_SIZE set to $MEMORY_SIZE"
   TIMEOUT=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.timeout)
   echo "TIMEOUT set to $TIMEOUT"
+  HANDLER=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.handler)
+  echo "HANDLER set to $HANDLER"
   #INLINE_POLICY_SRC=$(cat $LAM_DEPLOY_RULES | shyaml get-value role.inline_policy_src)
   echo "INLINE_POLICY_SRC set to $INLINE_POLICY_SRC"
-
 fi
 
 if [ $RETCODE -eq 0 ]; then
-  # RUNTIME, HANDLER and ARTIFACT_PATH need to be fixed for proper building
-
-    HANDLER="${FUNCTION_NAME}.handler"
-
-
-
-  ARTIFACT_PATH=${BUILD_PATH}/${FUNCTION_NAME}.zip
-
 
   echo
   echo "***********************************************************************"
