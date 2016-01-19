@@ -6,8 +6,7 @@
 
 
 #CURRENT ISSUES / QUESTIONS
-# ROLES - PATH
-# ALIAS - update after events?
+
 
 RETCODE=0
 
@@ -17,17 +16,6 @@ BUILD_PATH="/Users/jseed/Projects/LambdaFunction"
 TRUST_POLICY_SRC="${BUILD_PATH}/deploy/trust_policy.lam.json"
 echo "BUILD_PATH set to $BUILD_PATH"
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
-
-# TEST BUILD
-cd $BUILD_PATH
-rm JonPromoteTest.zip
-zip JonPromoteTest.zip JonPromoteTest.js
-#***************************************************************
-
-
-#Temporary - will come from config files
-BUCKET="jontestfunction-bucket"
-
 
 #Check if deployment rules exist
 if [ -e "$LAM_DEPLOY_RULES" ]; then
@@ -192,6 +180,7 @@ if [ $RETCODE -eq 0 ]; then
     FUNCTION_RESPONSE=$(aws lambda create-'function' --function-name ${FUNCTION_NAME} --description "${DESCRIPTION}" --runtime ${RUNTIME} --role ${ROLE} --handler ${HANDLER} --zip-file fileb://${ARTIFACT_PATH} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE})
     if [ $? -eq 0 ]; then
       echo "Successfully created function"
+
     else
       echo "ERROR - Failed to create function ${FUNCTION_NAME}"
       RETCODE=1
@@ -213,6 +202,8 @@ if [ $RETCODE -eq 0 ]; then
     RETCODE=1
   fi
 fi
+
+
 #************************Aliasing
 if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Checking for PROD alias on function $FUNCTION_NAME"
@@ -240,6 +231,7 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
+
 if [ $RETCODE -eq 0 ]; then
   echo
   echo "***********************************************************************"
@@ -248,27 +240,47 @@ if [ $RETCODE -eq 0 ]; then
   echo
 
   #**************************Events
-  echo "*** Retrieving function ARN "
+  echo -e "\n*** Retrieving function ARN "
   FUNCTION_ARN=$(echo ${FUNCTION_RESPONSE} | jq -r '.["FunctionArn"]')
   PROD_ARN="${FUNCTION_ARN}:PROD"
 
   echo "Function ARN set to $FUNCTION_ARN"
   echo "Production ARN set to $PROD_ARN"
 
-  echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
-
-  while [ $RETCODE ] && read -r -d '' KEY SRC KEY TYPE KEY PARAMETER; do
-      echo "*** Verifying event source exists"
-      if [ -e "$SRC" ]; then
-        echo "Event source found"
-        echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh and passing json file $SRC\n"
-        #Needs to be less specific
-        /Users/jseed/Projects/lambda-promotion/event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${PARAMETER}"
-        RETCODE=$?
+  # ***** Permissions
+  if [ $RETCODE -eq 0 ]; then
+    echo "***Checking if invoke permissions have been created"
+    PERMISSION_CHECK=$(aws lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
+    PERMISSION_EXISTS=$(echo "${PERMISSION_CHECK}" | jq -r  '.["Policy"]' | jq -r '.["Statement"]' | jq 'any(.["Sid"]=="invoke")')
+    if [ "$PERMISSION_EXISTS" = "false" ]; then
+      echo "No invoke permissions found"
+      echo "*** Applying invoke permissions"
+      PERMISSION_ADD=$(aws lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --action "lambda:InvokeFunction" --principal "*")
+      if [ $? -eq 0 ]; then
+        echo "Successfully added permission"
       else
-        echo "ERROR - Event source not found ($SRC)"
+        echo "ERROR - failed to add invoke permissions to function $FUNCTION_NAME"
         RETCODE=1
       fi
+    else
+      echo "Invoke permission found, no action needed"
+    fi
+  fi
+
+
+  echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
+
+  while [ $RETCODE -eq 0 ] && read -r -d '' KEY SRC KEY TYPE KEY PARAMETER; do
+
+    if [ -e "$SRC" ] || [ "$SRC" = "''" ]; then
+      echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
+      #Needs to be less specific
+      ./event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+      RETCODE=$?
+    else
+      echo "ERROR - $TYPE Event source not found ($SRC)"
+      RETCODE=1
+    fi
   done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
 
 
