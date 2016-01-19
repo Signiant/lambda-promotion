@@ -5,7 +5,7 @@
 BUILD_PATH=$1
 ENVIRONMENT=$2
 
-POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
+INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
 
