@@ -9,6 +9,8 @@ POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
 
+RETCODE=0
+
 #Check if deployment rules exist
 if [ -e "$LAM_DEPLOY_RULES" ]; then
   echo "*** Lambda Deployment Rules found (${LAM_DEPLOY_RULES})"
