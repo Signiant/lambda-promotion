@@ -76,7 +76,7 @@ fi
 # Update for event permissions? depends.
 if [ $RETCODE -eq 0 ]; then
   echo "*** Checking IAM for role $ROLE_NAME"
-  ROLE_RESP=$(aws iam get-role --role-name ${ROLE_NAME})
+  ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME})
 
   #******************* ROLE EXISTS - UPDATE
   if [ $? -eq 0 ]; then
@@ -84,7 +84,7 @@ if [ $RETCODE -eq 0 ]; then
 
     #******** UPDATE TRUST POLICY
     echo "*** Updating trust policy for role $ROLE_NAME to trust policy at $TRUST_POLICY_SRC"
-    TRUST_RESPONSE=$(aws iam update-assume-role-policy --role-name $ROLE_NAME --policy-document file://${TRUST_POLICY_SRC})
+    TRUST_RESPONSE=$(aws --region ${REGION} iam update-assume-role-policy --role-name $ROLE_NAME --policy-document file://${TRUST_POLICY_SRC})
 
     if [ $? -eq 0 ]; then
       echo "Successfully applied trust policy"
@@ -96,7 +96,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "$ROLE_NAME not found"
     echo "*** Creating role $ROLE_NAME with trust policy at $TRUST_POLICY_SRC"
-    ROLE_RESP=$(aws iam create-role --role-name ${ROLE_NAME} --assume-role-policy-document file://${TRUST_POLICY_SRC})
+    ROLE_RESP=$(aws --region ${REGION} iam create-role --role-name ${ROLE_NAME} --assume-role-policy-document file://${TRUST_POLICY_SRC})
 
     #If not successful, fail
     if [ $? -eq 0 ]; then
@@ -113,7 +113,7 @@ fi
 #******** UPDATE INLINE POLICY
 if [ $RETCODE -eq 0 ]; then
   echo "*** Applying inline policy $POLICY_NAME to role $ROLE_NAME"
-  POLICY_RESPONSE=$(aws iam put-role-policy --role-name $ROLE_NAME --policy-name $POLICY_NAME --policy-document file://${INLINE_POLICY_SRC})
+  POLICY_RESPONSE=$(aws --region ${REGION} iam put-role-policy --role-name $ROLE_NAME --policy-name $POLICY_NAME --policy-document file://${INLINE_POLICY_SRC})
 
   if [ $? -eq 0 ]; then
     echo "Successfully applied inline policy"
@@ -138,12 +138,12 @@ if [ $RETCODE -eq 0 ]; then
   echo
 
   echo "*** Checking lambda for function $FUNCTION_NAME"
-  FUNCTION_CHECK=$(aws lambda get-'function' --function-name ${FUNCTION_NAME})
+  FUNCTION_CHECK=$(aws --region ${REGION} lambda get-'function' --function-name ${FUNCTION_NAME})
 
   if [ $? -eq 0 ]; then
     echo "Function found"
     echo "*** Updating code for function ${FUNCTION_NAME}"
-    FUNCTION_RESPONSE=$(aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://${ARTIFACT_PATH} )
+    FUNCTION_RESPONSE=$(aws --region ${REGION} lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://${ARTIFACT_PATH} )
 
     if [ $? -eq 0 ]; then
       echo "Successfully updated function code"
@@ -153,7 +153,7 @@ if [ $RETCODE -eq 0 ]; then
     fi
     if [ $RETCODE -eq 0 ]; then
       echo "*** Updating configuration for function ${FUNCTION_NAME}"
-      FUNCTION_CONFIG_RESPONSE=$(aws lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER})
+      FUNCTION_CONFIG_RESPONSE=$(aws --region ${REGION} lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER})
       if [ $? -eq 0 ]; then
         echo "Successfully updated function configuration"
       else
@@ -165,7 +165,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "Function not found"
     echo "*** Creating function $FUNCTION_NAME"
-    FUNCTION_RESPONSE=$(aws lambda create-'function' --function-name ${FUNCTION_NAME} --description "${DESCRIPTION}" --runtime ${RUNTIME} --role ${ROLE} --handler ${HANDLER} --zip-file fileb://${ARTIFACT_PATH} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE})
+    FUNCTION_RESPONSE=$(aws --region ${REGION} lambda create-'function' --function-name ${FUNCTION_NAME} --description "${DESCRIPTION}" --runtime ${RUNTIME} --role ${ROLE} --handler ${HANDLER} --zip-file fileb://${ARTIFACT_PATH} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE})
     if [ $? -eq 0 ]; then
       echo "Successfully created function"
 
@@ -181,7 +181,7 @@ fi
 #*************************Version
 if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Publishing new version of function $FUNCTION_NAME"
-  PUBLISH_RESPONSE=$(aws lambda publish-version --function-name ${FUNCTION_NAME})
+  PUBLISH_RESPONSE=$(aws --region ${REGION} lambda publish-version --function-name ${FUNCTION_NAME})
   if [ $? -eq 0 ]; then
     FUNCTION_VERSION=$(echo $PUBLISH_RESPONSE | jq -r '.["Version"]')
     echo "Successfully published function $FUNCTION_NAME version $FUNCTION_VERSION"
@@ -195,11 +195,11 @@ fi
 #************************Aliasing
 if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Checking for PROD alias on function $FUNCTION_NAME"
-  ALIAS_CHECK=$(aws lambda get-alias --function-name ${FUNCTION_NAME} --name PROD)
+  ALIAS_CHECK=$(aws --region ${REGION} lambda get-alias --function-name ${FUNCTION_NAME} --name PROD)
   if [ $? -eq 0 ]; then
     echo "Alias found"
     echo "*** Updating alias PROD on function $FUNCTION_NAME to point to version $FUNCTION_VERSION"
-    ALIAS_RESPONSE=$(aws lambda update-alias --function-name ${FUNCTION_NAME} --function-version ${FUNCTION_VERSION} --name PROD)
+    ALIAS_RESPONSE=$(aws --region ${REGION} lambda update-alias --function-name ${FUNCTION_NAME} --function-version ${FUNCTION_VERSION} --name PROD)
     if [ $? -eq 0 ]; then
       echo "Successfully updated alias PROD to point to version $FUNCTION_VERSION of function"
     else
@@ -209,7 +209,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "Alias not found"
     echo "*** Creating alias PROD and applying to function $FUNCTION_NAME version $FUNCTION_VERSION"
-    ALIAS_RESPONSE=$(aws lambda create-alias --function-name ${FUNCTION_NAME} --name PROD --function-version ${FUNCTION_VERSION})
+    ALIAS_RESPONSE=$(aws --region ${REGION} lambda create-alias --function-name ${FUNCTION_NAME} --name PROD --function-version ${FUNCTION_VERSION})
     if [ $? -eq 0 ]; then
       echo "Alias successfully created and applied"
     else
@@ -238,12 +238,12 @@ if [ $RETCODE -eq 0 ]; then
   # ***** Permissions
   if [ $RETCODE -eq 0 ]; then
     echo "***Checking if invoke permissions have been created"
-    PERMISSION_CHECK=$(aws lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
+    PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
     PERMISSION_EXISTS=$(echo "${PERMISSION_CHECK}" | jq -r  '.["Policy"]' | jq -r '.["Statement"]' | jq 'any(.["Sid"]=="invoke")')
     if [ "$PERMISSION_EXISTS" = "false" ]; then
       echo "No invoke permissions found"
       echo "*** Applying invoke permissions"
-      PERMISSION_ADD=$(aws lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --action "lambda:InvokeFunction" --principal "*")
+      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --action "lambda:InvokeFunction" --principal "*")
       if [ $? -eq 0 ]; then
         echo "Successfully added permission"
       else
