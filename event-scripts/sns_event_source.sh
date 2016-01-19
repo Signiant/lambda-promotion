@@ -10,7 +10,7 @@ RETCODE=0
 if [ $RETCODE -eq 0 ]; then
 
   echo "*** Subscribing function $FUNCTION_ARN to topic $TOPIC_ARN "
-  SUBSCRIPTION_ADD=$(aws sns subscribe --topic-arn ${TOPIC_ARN} --protocol lambda --notification-endpoint ${FUNCTION_ARN})
+  SUBSCRIPTION_ADD=$(aws --region ${REGION} sns subscribe --topic-arn ${TOPIC_ARN} --protocol lambda --notification-endpoint ${FUNCTION_ARN})
 
   if [ $? -eq 0 ]; then
     echo "Succesfully subscribed to topic"

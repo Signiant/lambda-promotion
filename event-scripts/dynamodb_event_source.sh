@@ -7,7 +7,7 @@ TABLE_NAME=$4
 RETCODE=0
 
 echo "*** Retrieving latest stream arn from table $TABLE_NAME"
-TABLE_CHECK=$(aws dynamodb describe-table --table-name ${TABLE_NAME})
+TABLE_CHECK=$(aws --region ${REGION} dynamodb describe-table --table-name ${TABLE_NAME})
 
 if [ $? -eq 0 ]; then
   STREAM_ARN=$(echo $TABLE_CHECK | jq -r '.["Table"]["LatestStreamArn"]')
@@ -40,7 +40,7 @@ fi
 
 if [ $RETCODE -eq 0 ]; then
   echo "*** Checking for existing event source mapping"
-  UUID=$(aws lambda list-event-source-mappings --function-name ${FUNCTION_ARN} | jq --arg FUNCTION $FUNCTION_ARN  --arg EVENT $STREAM_ARN -r '.["EventSourceMappings"][] | select((.["FunctionArn"]==$FUNCTION) and (.["EventSourceArn"]==$EVENT)) | .["UUID"]')
+  UUID=$(aws --region ${REGION} lambda list-event-source-mappings --function-name ${FUNCTION_ARN} | jq --arg FUNCTION $FUNCTION_ARN  --arg EVENT $STREAM_ARN -r '.["EventSourceMappings"][] | select((.["FunctionArn"]==$FUNCTION) and (.["EventSourceArn"]==$EVENT)) | .["UUID"]')
 
   if [ -n "$UUID" ]; then
 
@@ -59,7 +59,7 @@ if [ $RETCODE -eq 0 ]; then
     else
       ENABLED="--no-enabled"
     fi
-    EVENT_UPDATE=$(aws lambda update-event-source-mapping --uuid $UUID $ENABLED --batch-size $BATCH_SIZE)
+    EVENT_UPDATE=$(aws --region ${REGION} lambda update-event-source-mapping --uuid $UUID $ENABLED --batch-size $BATCH_SIZE)
     if [ $? -eq 0 ]; then
       echo "Successfully updated event source mapping"
     else
@@ -69,7 +69,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "No existing event source mapping found."
     echo "*** Creating new event source mapping between function $FUNCTION_ARN and event source $STREAM_ARN"
-    EVENT_ADD=$(aws lambda create-event-source-mapping --cli-input-json file://$EVENT_SRC)
+    EVENT_ADD=$(aws --region ${REGION} lambda create-event-source-mapping --cli-input-json file://$EVENT_SRC)
     if [ $? -eq 0 ]; then
       echo "Successfully added new event source mapping for dynamodb table $TABLE_NAME"
     else

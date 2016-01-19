@@ -21,7 +21,7 @@ else
 fi
 
 if [ $RETCODE -eq 0 ]; then
-    NOTIFICATION_RESPONSE=$(aws s3api put-bucket-notification-configuration --bucket ${BUCKET} --notification-configuration file://$EVENT_SRC)
+    NOTIFICATION_RESPONSE=$(aws --region ${REGION} s3api put-bucket-notification-configuration --bucket ${BUCKET} --notification-configuration file://$EVENT_SRC)
   if [ $? -eq 0 ]; then
     echo "Successfully created/update s3 bucket notification"
   else

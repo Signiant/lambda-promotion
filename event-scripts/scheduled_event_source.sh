@@ -15,7 +15,7 @@ FUNCTION_NAME=${ARRAY[($COUNT - 2)]}
 
 
 echo "*** Creating/updating cloudwatch event rule"
-PUT_RULE=$(aws events put-rule --cli-input-json file://$EVENT_SRC)
+PUT_RULE=$(aws --region ${REGION} events put-rule --cli-input-json file://$EVENT_SRC)
 if [ $? -eq 0 ]; then
   echo "Succesfully created/updated event"
 else
@@ -34,7 +34,7 @@ fi
 
 if [ $RETCODE -eq 0 ]; then
   echo "*** Creating/updating event target."
-  TARGET_RESPONSE=$(aws events put-targets --rule ${RULE_NAME} --targets "Id=${FUNCTION_NAME}_target,Arn=$FUNCTION_ARN")
+  TARGET_RESPONSE=$(aws --region ${REGION} events put-targets --rule ${RULE_NAME} --targets "Id=${FUNCTION_NAME}_target,Arn=$FUNCTION_ARN")
   if [ $? -eq 0 ]; then
     echo "Successfully created/updated event targets."
   else
