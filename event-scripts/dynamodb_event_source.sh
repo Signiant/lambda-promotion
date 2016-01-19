@@ -2,7 +2,8 @@
 
 EVENT_SRC=$1
 FUNCTION_ARN=$2
-TABLE_NAME=$3
+REGION=$3
+TABLE_NAME=$4
 RETCODE=0
 
 echo "*** Retrieving latest stream arn from table $TABLE_NAME"
@@ -68,7 +69,7 @@ if [ $RETCODE -eq 0 ]; then
   else
     echo "No existing event source mapping found."
     echo "*** Creating new event source mapping between function $FUNCTION_ARN and event source $STREAM_ARN"
-    EVENT_ADD=$(aws lambda create-event-source-mapping --cli-input-json "$(cat ${EVENT_SRC})")
+    EVENT_ADD=$(aws lambda create-event-source-mapping --cli-input-json file://$EVENT_SRC)
     if [ $? -eq 0 ]; then
       echo "Successfully added new event source mapping for dynamodb table $TABLE_NAME"
     else
