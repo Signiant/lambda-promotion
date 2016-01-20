@@ -264,7 +264,7 @@ if [ $RETCODE -eq 0 ]; then
       if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
         echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
         #Needs to be less specific
-        ./event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+        event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
         RETCODE=$?
       else
         echo "ERROR - $TYPE Event source not found (${BUILD_PATH}/${SRC})"
