@@ -239,8 +239,9 @@ if [ $RETCODE -eq 0 ]; then
   if [ $RETCODE -eq 0 ]; then
     echo "***Checking if invoke permissions have been created"
     PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
+    PERMISSION_RESULT=$?
     PERMISSION_EXISTS=$(echo "${PERMISSION_CHECK}" | jq -r  '.["Policy"]' | jq -r '.["Statement"]' | jq 'any(.["Sid"]=="invoke")')
-    if [ "$PERMISSION_EXISTS" = "false" ]; then
+    if [ $PERMISSION_RESULT -eq 1 ] || [ "$PERMISSION_EXISTS" = "false" ]; then
       echo "No invoke permissions found"
       echo "*** Applying invoke permissions"
       PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --action "lambda:InvokeFunction" --principal "*")
