@@ -5,10 +5,10 @@
 BUILD_PATH=$1
 ENVIRONMENT=$2
 
-INLINE_POLICY_SRC=${BUILD_PATH}deploy/policy.lam.json
-TRUST_POLICY_SRC=${BUILD_PATH}deploy/trust_policy.lam.json
-LAM_DEPLOY_RULES=${BUILD_PATH}deploy/lambda.yaml
-ARTIFACT_PATH=${BUILD_PATH}lambda.zip
+INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
+TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
+LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
+ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
 
 RETCODE=0
 
@@ -261,13 +261,13 @@ if [ $RETCODE -eq 0 ]; then
   EVENTS_EXIST=$(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events &>/dev/null)
   if [ $? -eq 0 ]; then
     while [ $RETCODE -eq 0 ] && read -r -d '' KEY TYPE KEY SRC KEY PARAMETER; do
-      if [ -e ${BUILD_PATH}${SRC} ] || [ "$SRC" = "''" ]; then
+      if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
         echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
         #Needs to be less specific
-        ./event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+        ./event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
         RETCODE=$?
       else
-        echo "ERROR - $TYPE Event source not found (${BUILD_PATH}${SRC})"
+        echo "ERROR - $TYPE Event source not found (${BUILD_PATH}/${SRC})"
         RETCODE=1
       fi
     done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
