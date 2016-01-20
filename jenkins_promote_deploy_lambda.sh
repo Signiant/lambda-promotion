@@ -258,24 +258,24 @@ if [ $RETCODE -eq 0 ]; then
 
 
   echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
-
-  while [ $RETCODE -eq 0 ] && read -r -d '' KEY SRC KEY TYPE KEY PARAMETER; do
-
-    if [ -e "$SRC" ] || [ "$SRC" = "''" ]; then
-      echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
-      #Needs to be less specific
-      ./event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
-      RETCODE=$?
-    else
-      echo "ERROR - $TYPE Event source not found ($SRC)"
-      RETCODE=1
+  EVENTS_EXIST=$(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events &>/dev/null)
+  if [ $? -eq 0 ]; then
+    while [ $RETCODE -eq 0 ] && read -r -d '' KEY TYPE KEY SRC KEY PARAMETER; do
+      if [ -e $SRC ] || [ "$SRC" = "''" ]; then
+        echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
+        #Needs to be less specific
+        ./event-scripts/${TYPE}_event_source.sh  "${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+        RETCODE=$?
+      else
+        echo "ERROR - $TYPE Event source not found ($SRC)"
+        RETCODE=1
+      fi
+    done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
+    if [ $RETCODE -eq 0 ]; then
+      echo -e "\nSuccessfully created all event sources"
     fi
-  done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
-
-
-#Update/Remove
-  if [ $RETCODE -eq 0 ]; then
-    echo -e "\nSuccessfully created all event sources"
+  else
+    echo "No event sources found"
   fi
 fi
 
