@@ -23,8 +23,14 @@ else
 fi
 
 if [ $RETCODE -eq 0 ]; then
-  echo "*** Retrieving rule name from event source file"
+  echo "*** Retrieving rule name from event source file and prefixing with function name"
   RULE_NAME=$(cat $EVENT_SRC | jq -r '.["Name"]')
+  RULE_NAME="${FUNCTION_NAME}_${RULE_NAME}"
+  if [ ${#RULE_NAME} -gt 64 ]; then
+    RULE_NAME=${RULE_NAME:0:64}
+    echo "RULE_NAME exceeds the maximum length of 64 characters and will be truncated"
+  fi
+
   echo "RULE_NAME set to $RULE_NAME"
   echo "*** Retrieving rule arn from response"
   RULE_ARN=$(echo $PUT_RULE | jq -r '.["RuleArn"]')
