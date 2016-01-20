@@ -6,8 +6,8 @@ BUILD_PATH=$1
 ENVIRONMENT=$2
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
-TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/lambda.yaml
 ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
 
@@ -96,7 +96,6 @@ if [ $RETCODE -eq 0 ]; then
     echo "*** Creating role $ROLE_NAME with trust policy at $TRUST_POLICY_SRC"
     ROLE_RESP=$(aws --region ${REGION} iam create-role --role-name ${ROLE_NAME} --assume-role-policy-document file://${TRUST_POLICY_SRC})
 
-    #If not successful, fail
     if [ $? -eq 0 ]; then
       echo -e "Successfully created role $ROLE_NAME\n"
       echo -e "***Sleeping for 5 seconds\n"
