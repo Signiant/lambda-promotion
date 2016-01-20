@@ -29,6 +29,14 @@ else
   RETCODE=1
 fi
 
+#Check if inline policy exists
+if [ -e "$INLINE_POLICY_SRC" ]; then
+  echo "*** Inline Policy found ($INLINE_POLICY_SRC)"
+else
+  echo "*** ERROR - Inline Policy not found ($INLINE_POLICY_SRC)"
+  RETCODE=1
+fi
+
 if [ $RETCODE -eq 0 ]; then
   #Retrieve and set configuration values
   echo -e "*** Retrieving configuration values from $LAM_DEPLOY_RULES\n"
@@ -47,8 +55,6 @@ if [ $RETCODE -eq 0 ]; then
   echo "TIMEOUT set to $TIMEOUT"
   HANDLER=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.handler)
   echo "HANDLER set to $HANDLER"
-  #INLINE_POLICY_SRC=$(cat $LAM_DEPLOY_RULES | shyaml get-value role.inline_policy_src)
-  echo "INLINE_POLICY_SRC set to $INLINE_POLICY_SRC"
 fi
 
 if [ $RETCODE -eq 0 ]; then
