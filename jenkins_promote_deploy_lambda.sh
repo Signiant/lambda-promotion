@@ -4,6 +4,7 @@
 
 BUILD_PATH=$1
 ENVIRONMENT=$2
+SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 TRUST_POLICY_SRC=${BUILD_PATH}/deploy/trust_policy.lam.json
@@ -264,7 +265,7 @@ if [ $RETCODE -eq 0 ]; then
       if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
         echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
         #Needs to be less specific
-        event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+        ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
         RETCODE=$?
       else
         echo "ERROR - $TYPE Event source not found (${BUILD_PATH}/${SRC})"
