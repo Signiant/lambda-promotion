@@ -71,15 +71,6 @@ if [ $RETCODE -eq 0 ]; then
   POLICY_NAME="${FUNCTION_NAME}_policy"
   echo -e "POLICY_NAME set to $POLICY_NAME\n"
 
-  echo "*** Verifying INLINE_POLICY_SRC path"
-  if [ -e "$INLINE_POLICY_SRC" ]; then
-    echo -e "Role $ROLE_NAME policy file found (${INLINE_POLICY_SRC})\n"
-  else
-    echo "ERROR - Role $ROLE_NAME policy file not found (${INLINE_POLICY_SRC})"
-    RETCODE=1
-  fi
-fi
-
 # Update for event permissions? depends.
 if [ $RETCODE -eq 0 ]; then
   echo "*** Checking IAM for role $ROLE_NAME"
