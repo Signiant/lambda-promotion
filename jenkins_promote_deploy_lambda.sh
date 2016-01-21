@@ -226,10 +226,12 @@ if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Retrieving function ARN "
   FUNCTION_ARN=$(echo ${FUNCTION_RESPONSE} | jq -r '.["FunctionArn"]')
   PROD_ARN="${FUNCTION_ARN}:PROD"
+  FUNCTION_ARN_SPLIT=(${FUNCTION_ARN//:/ })
+  ACCOUNT_NUMBER=${FUNCTION_ARN_SPLIT[4]}
 
   echo "Function ARN set to $FUNCTION_ARN"
   echo "Production ARN set to $PROD_ARN"
-
+  echo "Account number set to $ACCOUNT_NUMBER"
   # ***** Permissions
   if [ $RETCODE -eq 0 ]; then
     echo "***Checking if invoke permissions have been created"
@@ -239,7 +241,7 @@ if [ $RETCODE -eq 0 ]; then
     if [ $PERMISSION_RESULT -ne 0 ] || [ "$PERMISSION_EXISTS" = "false" ]; then
       echo "No invoke permissions found"
       echo "*** Applying invoke permissions"
-      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --action "lambda:InvokeFunction" --principal "*")
+      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --source-account $ACCOUNT_NUMBER --action "lambda:InvokeFunction" --principal "*")
       if [ $? -eq 0 ]; then
         echo "Successfully added permission"
       else
