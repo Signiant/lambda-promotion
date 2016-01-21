@@ -58,7 +58,6 @@ if [ $RETCODE -eq 0 ]; then
 fi
 
 if [ $RETCODE -eq 0 ]; then
-
   echo
   echo "***********************************************************************"
   echo "****************** ROLES AND POLICIES *********************************"
@@ -71,8 +70,7 @@ if [ $RETCODE -eq 0 ]; then
   POLICY_NAME="${FUNCTION_NAME}_policy"
   echo -e "POLICY_NAME set to $POLICY_NAME\n"
 
-# Update for event permissions? depends.
-if [ $RETCODE -eq 0 ]; then
+  # Update for event permissions? depends.
   echo "*** Checking IAM for role $ROLE_NAME"
   ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME})
 
