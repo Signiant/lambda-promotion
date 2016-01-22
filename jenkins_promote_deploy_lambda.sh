@@ -243,7 +243,7 @@ if [ $RETCODE -eq 0 ]; then
     echo "Event types to process : ${EVENT_TYPES[@]}"
     for TYPE in ${EVENT_TYPES[@]}
     do
-      if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]=="$name")')" = "false" ]; then
+      if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]==$name)')" = "false" ]; then
         echo "No invoke permissions found for event type $TYPE"
         echo "*** Applying invoke permissions"
         PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
