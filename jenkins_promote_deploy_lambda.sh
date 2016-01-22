@@ -7,7 +7,7 @@ ENVIRONMENT=$2
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
-INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.json
+INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.json
 ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
 
