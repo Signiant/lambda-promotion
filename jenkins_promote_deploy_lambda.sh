@@ -8,7 +8,7 @@ SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
-LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.yaml
+LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.json
 ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
 
 RETCODE=0
@@ -38,22 +38,21 @@ else
 fi
 
 if [ $RETCODE -eq 0 ]; then
-  #Retrieve and set configuration values
   echo -e "*** Retrieving configuration values from $LAM_DEPLOY_RULES\n"
 
-  REGION=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.region)
+  REGION=$(jq -r '.["region"]' $LAM_DEPLOY_RULES)
   echo "REGION set to $REGION"
-  FUNCTION_NAME=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.name)
+  FUNCTION_NAME=$(jq -r '.["name"]' $LAM_DEPLOY_RULES)
   echo "FUNCTION_NAME set to $FUNCTION_NAME"
-  DESCRIPTION=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.description)
+  DESCRIPTION=$(jq -r '.["description"]' $LAM_DEPLOY_RULES)
   echo "DESCRIPTION set to $DESCRIPTION"
-  RUNTIME=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.runtime)
+  RUNTIME=$(jq -r '.["runtime"]' $LAM_DEPLOY_RULES)
   echo "RUNTIME set to $RUNTIME"
-  MEMORY_SIZE=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.memory_size)
+  MEMORY_SIZE=$(jq -r '.["memorySize"]' $LAM_DEPLOY_RULES)
   echo "MEMORY_SIZE set to $MEMORY_SIZE"
-  TIMEOUT=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.timeout)
+  TIMEOUT=$(jq -r '.["timeout"]' $LAM_DEPLOY_RULES)
   echo "TIMEOUT set to $TIMEOUT"
-  HANDLER=$(cat $LAM_DEPLOY_RULES | shyaml get-value function_configuration.handler)
+  HANDLER=$(jq -r '.["handler"]' $LAM_DEPLOY_RULES)
   echo "HANDLER set to $HANDLER"
 fi
 
@@ -96,8 +95,8 @@ if [ $RETCODE -eq 0 ]; then
 
     if [ $? -eq 0 ]; then
       echo -e "Successfully created role $ROLE_NAME\n"
-      echo -e "***Sleeping for 5 seconds\n"
-      sleep 5s
+      echo -e "***Sleeping for 10 seconds\n"
+      sleep 10s
     else
       echo "ERROR - Failed to create role $ROLE_NAME using trust policy at $TRUST_POLICY_SRC"
       RETCODE=1
@@ -232,42 +231,59 @@ if [ $RETCODE -eq 0 ]; then
   echo "Function ARN set to $FUNCTION_ARN"
   echo "Production ARN set to $PROD_ARN"
   echo "Account number set to $ACCOUNT_NUMBER"
+
   # ***** Permissions
   if [ $RETCODE -eq 0 ]; then
-    echo "***Checking if invoke permissions have been created"
+    echo "*** Retrieving event policy"
     PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
     PERMISSION_RESULT=$?
-    PERMISSION_EXISTS=$(echo "${PERMISSION_CHECK}" | jq -r  '.["Policy"]' | jq -r '.["Statement"]' | jq 'any(.["Sid"]=="invoke")')
-    if [ $PERMISSION_RESULT -ne 0 ] || [ "$PERMISSION_EXISTS" = "false" ]; then
-      echo "No invoke permissions found"
-      echo "*** Applying invoke permissions"
-      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id invoke --source-account $ACCOUNT_NUMBER --action "lambda:InvokeFunction" --principal "*")
-      if [ $? -eq 0 ]; then
-        echo "Successfully added permission"
+
+    echo "*** Setting permissions for individual event types"
+    EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add' $LAM_DEPLOY_RULES))
+    echo "Event types to process : ${EVENT_TYPES[@]}"
+    for TYPE in ${EVENT_TYPES[@]}
+    do
+      if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]=="$name")')" = "false" ]; then
+        echo "No invoke permissions found for event type $TYPE"
+        echo "*** Applying invoke permissions"
+        PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${PROD_ARN} --statement-id "${TYPE}_invoke" --source-account $ACCOUNT_NUMBER --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com")
+        if [ $? -eq 0 ]; then
+          echo "Succesffully added invoke permissions for $TYPE"
+        else
+          echo "ERROR - failed to add invoke permissions for event type $TYPE to $PROD_ARN"
+          RETCODE=1
+          break
+        fi
       else
-        echo "ERROR - failed to add invoke permissions to function $FUNCTION_NAME"
-        RETCODE=1
+        echo "$TYPE permissions found, no action necessary"
       fi
-    else
-      echo "Invoke permission found, no action needed"
-    fi
+    done
   fi
 
 
-  echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
-  EVENTS_EXIST=$(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events &>/dev/null)
+  echo "*** Checking for event sources in configuration files"
+  jq -e '. | has("events")' $LAM_DEPLOY_RULES
   if [ $? -eq 0 ]; then
-    while [ $RETCODE -eq 0 ] && read -r -d '' KEY TYPE KEY SRC KEY PARAMETER; do
+    echo "Event sources found"
+    echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
+    LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
+
+    for((i=0;i<$LENGTH;i++))
+    do
+      TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
+      SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
+      PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
+
       if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
-        echo -e "\nCalling executing script at ./event-scripts/${TYPE}_event_source.sh"
-        #Needs to be less specific
-        ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh  "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
-        RETCODE=$?
+        echo -e "\nExecuting script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
+        ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
       else
-        echo "ERROR - $TYPE Event source not found (${BUILD_PATH}/${SRC})"
+        echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
         RETCODE=1
+        break
       fi
-    done < <(cat ${LAM_DEPLOY_RULES} | shyaml get-values-0 events)
+    done
+
     if [ $RETCODE -eq 0 ]; then
       echo -e "\nSuccessfully created all event sources"
     fi
