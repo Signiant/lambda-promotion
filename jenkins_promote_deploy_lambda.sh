@@ -6,6 +6,8 @@ BUILD_PATH=$1
 ENVIRONMENT=$2
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+PULL_TYPES=( dynamodb kinesis )
+
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.json
@@ -239,7 +241,12 @@ if [ $RETCODE -eq 0 ]; then
     PERMISSION_RESULT=$?
 
     echo "*** Setting permissions for individual event types"
-    EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add' $LAM_DEPLOY_RULES))
+    EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add ' $LAM_DEPLOY_RULES))
+    for TYPE in ${PULL_TYPES[@]}
+    #remove pull events from list
+    do
+      EVENT_TYPES=( "${EVENT_TYPES[@]/$PULL_TYPE}" )
+    done
     echo "Event types to process : ${EVENT_TYPES[@]}"
     for TYPE in ${EVENT_TYPES[@]}
     do
