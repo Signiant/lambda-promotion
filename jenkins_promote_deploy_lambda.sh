@@ -282,8 +282,12 @@ if [ $RETCODE -eq 0 ]; then
       PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
 
       if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
-        echo -e "\nExecuting script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
+        echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
         ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+        if [ $? -ne 0 ]; then
+          RETCODE=1
+          break
+        fi
       else
         echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
         RETCODE=1
