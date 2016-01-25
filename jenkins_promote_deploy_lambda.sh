@@ -11,7 +11,7 @@ PULL_TYPES=( dynamodb kinesis )
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.json
-ARTIFACT_PATH=${BUILD_PATH}/lambda.zip
+ARTIFACT_PATH=${BUILD_PATH}/${ARCHIVE_NAME}
 
 RETCODE=0
 
@@ -46,6 +46,8 @@ if [ $RETCODE -eq 0 ]; then
   echo "REGION set to $REGION"
   FUNCTION_NAME=$(jq -r '.["name"]' $LAM_DEPLOY_RULES)
   echo "FUNCTION_NAME set to $FUNCTION_NAME"
+  ARCHIVE_NAME=$(jq -r '.["archive"]' $LAM_DEPLOY_RULES)
+  echo "ARCHIVE_NAME set to $ARCHIVE_NAME"
   DESCRIPTION=$(jq -r '.["description"]' $LAM_DEPLOY_RULES)
   echo "DESCRIPTION set to $DESCRIPTION"
   RUNTIME=$(jq -r '.["runtime"]' $LAM_DEPLOY_RULES)
