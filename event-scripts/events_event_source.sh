@@ -12,26 +12,36 @@ ARRAY=(${FUNCTION_ARN//:/ })
 COUNT=${#ARRAY[@]}
 FUNCTION_NAME=${ARRAY[($COUNT - 2)]}
 
-
-echo "*** Creating/updating cloudwatch event rule"
-PUT_RULE=$(aws --region ${REGION} events put-rule --cli-input-json file://$EVENT_SRC)
-if [ $? -eq 0 ]; then
-  echo "Succesfully created/updated event"
+echo "*** Retrieving rule name from event source file and prefixing with function name"
+RULE_NAME=$(cat $EVENT_SRC | jq -r '.["Name"]')
+RULE_NAME="${FUNCTION_NAME}_${RULE_NAME}"
+if [ ${#RULE_NAME} -gt 64 ]; then
+  RULE_NAME=${RULE_NAME:0:64}
+  echo "RULE_NAME exceeds the maximum length of 64 characters and will be truncated"
+fi
+echo "*** Replacing rule name in json file"
+cat $EVENT_SRC | jq --arg NAME $RULE_NAME '.["Name"]=$NAME' > /tmp/events_event.$$
+if [ -s /tmp/events_event.$$ ]; then
+  echo "RULE_NAME set to $RULE_NAME"
+  mv /tmp/events_event.$$ $EVENT_SRC
 else
-  echo "ERROR - failed to create/update event rule ($EVENT_SRC)"
+  echo "ERROR - failed to modify function ARN in json file $EVENT_SRC"
   RETCODE=1
+  rm /tmp/events_event.$$
 fi
 
 if [ $RETCODE -eq 0 ]; then
-  echo "*** Retrieving rule name from event source file and prefixing with function name"
-  RULE_NAME=$(cat $EVENT_SRC | jq -r '.["Name"]')
-  RULE_NAME="${FUNCTION_NAME}_${RULE_NAME}"
-  if [ ${#RULE_NAME} -gt 64 ]; then
-    RULE_NAME=${RULE_NAME:0:64}
-    echo "RULE_NAME exceeds the maximum length of 64 characters and will be truncated"
+  echo "*** Creating/updating cloudwatch event rule"
+  PUT_RULE=$(aws --region ${REGION} events put-rule --cli-input-json file://$EVENT_SRC)
+  if [ $? -eq 0 ]; then
+    echo "Succesfully created/updated event"
+  else
+    echo "ERROR - failed to create/update event rule ($EVENT_SRC)"
+    RETCODE=1
   fi
+fi
 
-  echo "RULE_NAME set to $RULE_NAME"
+if [ $RETCODE -eq 0 ]; then
   echo "*** Retrieving rule arn from response"
   RULE_ARN=$(echo $PUT_RULE | jq -r '.["RuleArn"]')
   echo "RULE_ARN set to $RULE_ARN"
