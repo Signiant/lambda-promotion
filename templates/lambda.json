@@ -1,0 +1,17 @@
+{
+  "name": "",
+  "archive": "",
+  "description": "",
+  "region": "",
+  "runtime": "",
+  "memorySize": ,
+  "timeout": ,
+  "handler": "",
+  "events": [
+    {
+      "type": "",
+      "src": "",
+      "parameter": ""
+    }
+  ]
+}
