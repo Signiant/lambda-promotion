@@ -271,39 +271,44 @@ if [ $RETCODE -eq 0 ]; then
     done
   fi
 
+  if [ $RETCODE -eq 0 ]; then
+    echo "*** Checking for event sources in configuration files"
+    jq -e '. | has("events")' $LAM_DEPLOY_RULES
+    HAS_EVENTS=$?
+    if [ $HAS_EVENTS -eq 0 ]; then
+      LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
+      if [ $LENGTH -ne 0 ]; then
+        echo "Event sources found"
+        echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
+        for((i=0;i<$LENGTH;i++))
+        do
+          TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
+          SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
+          PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
 
-  echo "*** Checking for event sources in configuration files"
-  jq -e '. | has("events")' $LAM_DEPLOY_RULES
-  if [ $? -eq 0 ]; then
-    echo "Event sources found"
-    echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
-    LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
+          if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
+            echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
+            ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+            if [ $? -ne 0 ]; then
+              RETCODE=1
+              break
+            fi
+          else
+            echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
+            RETCODE=1
+            break
+          fi
+        done
 
-    for((i=0;i<$LENGTH;i++))
-    do
-      TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
-      SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
-      PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
-
-      if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
-        echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
-        ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
-        if [ $? -ne 0 ]; then
-          RETCODE=1
-          break
+        if [ $RETCODE -eq 0 ]; then
+          echo -e "\nSuccessfully created all event sources"
         fi
-      else
-        echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
-        RETCODE=1
-        break
       fi
-    done
-
-    if [ $RETCODE -eq 0 ]; then
-      echo -e "\nSuccessfully created all event sources"
     fi
-  else
-    echo "No event sources found"
+
+    if [ $HAS_EVENTS -eq 1 ] || [ $LENGTH -eq 0 ]; then
+        echo "No event sources found"
+    fi
   fi
 fi
 
