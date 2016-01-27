@@ -10,7 +10,7 @@ PULL_TYPES=( dynamodb kinesis )
 
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
-LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/${ENVIRONMENT}.lam.json
+LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
 
 
 RETCODE=0
