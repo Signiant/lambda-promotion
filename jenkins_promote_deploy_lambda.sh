@@ -6,6 +6,8 @@ BUILD_PATH=$1
 ENVIRONMENT=$2
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+PULL_TYPES=( dynamodb kinesis )
+
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
@@ -242,21 +244,31 @@ if [ $RETCODE -eq 0 ]; then
     PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
     PERMISSION_RESULT=$?
 
-    if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e 'any(.["Sid"]==invoke)')" = "false" ]; then
-      echo "No invoke permissions found"
-      echo "*** Applying invoke permissions"
-      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "invoke" --source-account ${ACCOUNT_NUMBER} --action "lambda:InvokeFunction" --principal "*" --qualifier PROD)
-      if [ $? -eq 0 ]; then
-        echo "Succesffully added invoke permissions"
+    echo "*** Setting permissions for individual event types"
+    EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add ' $LAM_DEPLOY_RULES))
+    for TYPE in ${PULL_TYPES[@]}
+    #remove pull events from list
+    do
+      EVENT_TYPES=( "${EVENT_TYPES[@]/$PULL_TYPE}" )
+    done
+    echo "Event types to process : ${EVENT_TYPES[@]}"
+    for TYPE in ${EVENT_TYPES[@]}
+    do
+      if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]==$name)')" = "false" ]; then
+        echo "No invoke permissions found for event type $TYPE"
+        echo "*** Applying invoke permissions"
+        PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+        if [ $? -eq 0 ]; then
+          echo "Succesffully added invoke permissions for $TYPE"
+        else
+          echo "ERROR - failed to add invoke permissions for event type $TYPE to $PROD_ARN"
+          RETCODE=1
+          break
+        fi
       else
-        echo "ERROR - failed to add invoke permissions to $PROD_ARN"
-        RETCODE=1
-        break
+        echo "$TYPE permissions found, no action necessary"
       fi
-    else
-      echo "Invoke permissions found, no action necessary"
-    fi
-
+    done
   fi
 
   if [ $RETCODE -eq 0 ]; then
@@ -271,11 +283,8 @@ if [ $RETCODE -eq 0 ]; then
         for((i=0;i<$LENGTH;i++))
         do
           TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
-          echo "TYPE set to $TYPE"
           SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
-          echo "SRC set to $SRC"
           PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
-          echo "PARAMETER set to $PARAMETER"
 
           if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
             echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
