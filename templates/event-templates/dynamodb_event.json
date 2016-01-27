@@ -1,7 +1,7 @@
 {
   "EventSourceArn": "*",
   "FunctionName": "*",
-  "Enabled": ,
-  "BatchSize": ,
-  "StartingPosition": 
+  "Enabled": "true",
+  "BatchSize": "100",
+  "StartingPosition": "LATEST" 
 }
