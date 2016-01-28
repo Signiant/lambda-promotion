@@ -23,7 +23,7 @@ echo "*** Replacing rule name in json file"
 cat $EVENT_SRC | jq --arg NAME $RULE_NAME '.["Name"]=$NAME' > /tmp/events_event.$$
 if [ -s /tmp/events_event.$$ ]; then
   echo "RULE_NAME set to $RULE_NAME"
-  mv /tmp/events_event.$$ $EVENT_SRC
+  TMP_PATH=/tmp/events_event.$$
 else
   echo "ERROR - failed to modify function ARN in json file $EVENT_SRC"
   RETCODE=1
@@ -32,11 +32,13 @@ fi
 
 if [ $RETCODE -eq 0 ]; then
   echo "*** Creating/updating cloudwatch event rule"
-  PUT_RULE=$(aws --region ${REGION} events put-rule --cli-input-json file://$EVENT_SRC)
+  PUT_RULE=$(aws --region ${REGION} events put-rule --cli-input-json file://${TMP_PATH})
   if [ $? -eq 0 ]; then
     echo "Succesfully created/updated event"
+    rm $TMP_PATH
   else
-    echo "ERROR - failed to create/update event rule ($EVENT_SRC)"
+    echo "ERROR - failed to create/update event rule ($TMP_PATH)"
+    rm $TMP_PATH
     RETCODE=1
   fi
 fi
