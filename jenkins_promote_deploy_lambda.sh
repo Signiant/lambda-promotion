@@ -58,9 +58,19 @@ if [ $RETCODE -eq 0 ]; then
   echo "TIMEOUT set to $TIMEOUT"
   HANDLER=$(jq -r '.["handler"]' $LAM_DEPLOY_RULES)
   echo "HANDLER set to $HANDLER"
-fi
+
 
   ARTIFACT_PATH="${BUILD_PATH}/${ARCHIVE_NAME}"
+  echo "ARTIFACT_PATH set to $ARTIFACT_PATH"
+
+  #Check if artifact exists
+  if [ -e $ARTIFACT_PATH ]; then
+    echo "*** Artifact found ($ARTIFACT_PATH)"
+  else
+    echo "*** ERROR - Artifact not found ($ARTIFACT_PATH)"
+    RETCODE=1
+  fi
+fi
 
 if [ $RETCODE -eq 0 ]; then
   echo
