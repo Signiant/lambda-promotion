@@ -87,7 +87,7 @@ if [ $RETCODE -eq 0 ]; then
 
   # Update for event permissions? depends.
   echo "*** Checking IAM for role $ROLE_NAME"
-  ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME})
+  ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME} 2> /dev/null)
 
   #******************* ROLE EXISTS - UPDATE
   if [ $? -eq 0 ]; then
@@ -148,7 +148,7 @@ if [ $RETCODE -eq 0 ]; then
   echo
 
   echo "*** Checking lambda for function $FUNCTION_NAME"
-  FUNCTION_CHECK=$(aws --region ${REGION} lambda get-'function' --function-name ${FUNCTION_NAME})
+  FUNCTION_CHECK=$(aws --region ${REGION} lambda get-'function' --function-name ${FUNCTION_NAME} 2> /dev/null/)
 
   if [ $? -eq 0 ]; then
     echo "Function found"
@@ -205,7 +205,7 @@ fi
 #************************Aliasing
 if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Checking for PROD alias on function $FUNCTION_NAME"
-  ALIAS_CHECK=$(aws --region ${REGION} lambda get-alias --function-name ${FUNCTION_NAME} --name PROD)
+  ALIAS_CHECK=$(aws --region ${REGION} lambda get-alias --function-name ${FUNCTION_NAME} --name PROD 2> /dev/null/)
   if [ $? -eq 0 ]; then
     echo "Alias found"
     echo "*** Updating alias PROD on function $FUNCTION_NAME to point to version $FUNCTION_VERSION"
@@ -251,7 +251,7 @@ if [ $RETCODE -eq 0 ]; then
   # ***** Permissions
   if [ $RETCODE -eq 0 ]; then
     echo "*** Retrieving event policy"
-    PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD)
+    PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD 2> /dev/null)
     PERMISSION_RESULT=$?
 
     echo "*** Setting permissions for individual event types"
@@ -288,7 +288,7 @@ if [ $RETCODE -eq 0 ]; then
 
   if [ $RETCODE -eq 0 ]; then
     echo "*** Checking for event sources in configuration files"
-    jq -e '. | has("events")' $LAM_DEPLOY_RULES
+    jq -e '. | has("events")' $LAM_DEPLOY_RULES >/dev/null
     HAS_EVENTS=$?
     if [ $HAS_EVENTS -eq 0 ]; then
       LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
