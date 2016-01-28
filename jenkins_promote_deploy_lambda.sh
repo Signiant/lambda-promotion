@@ -148,7 +148,7 @@ if [ $RETCODE -eq 0 ]; then
   echo
 
   echo "*** Checking lambda for function $FUNCTION_NAME"
-  FUNCTION_CHECK=$(aws --region ${REGION} lambda get-'function' --function-name ${FUNCTION_NAME} 2> /dev/null/)
+  FUNCTION_CHECK=$(aws --region ${REGION} lambda get-'function' --function-name ${FUNCTION_NAME} 2> /dev/null)
 
   if [ $? -eq 0 ]; then
     echo "Function found"
@@ -205,7 +205,7 @@ fi
 #************************Aliasing
 if [ $RETCODE -eq 0 ]; then
   echo -e "\n*** Checking for PROD alias on function $FUNCTION_NAME"
-  ALIAS_CHECK=$(aws --region ${REGION} lambda get-alias --function-name ${FUNCTION_NAME} --name PROD 2> /dev/null/)
+  ALIAS_CHECK=$(aws --region ${REGION} lambda get-alias --function-name ${FUNCTION_NAME} --name PROD 2> /dev/null)
   if [ $? -eq 0 ]; then
     echo "Alias found"
     echo "*** Updating alias PROD on function $FUNCTION_NAME to point to version $FUNCTION_VERSION"
