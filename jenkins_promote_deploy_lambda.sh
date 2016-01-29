@@ -183,10 +183,10 @@ if [ $RETCODE -eq 0 ]; then
       echo "ERROR - Failed to create function ${FUNCTION_NAME}"
       RETCODE=1
     fi
-    #IF ON CREATE TESTING REQUIRED PUT HERE
   fi
 fi
 
+# Test function here eventually
 
 #*************************Version
 if [ $RETCODE -eq 0 ]; then
@@ -248,79 +248,78 @@ if [ $RETCODE -eq 0 ]; then
   echo "Production ARN set to $PROD_ARN"
   echo "Account number set to $ACCOUNT_NUMBER"
 
-  # ***** Permissions
-  if [ $RETCODE -eq 0 ]; then
-    echo "*** Retrieving event policy"
-    PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD 2> /dev/null)
-    PERMISSION_RESULT=$?
-
-    echo "*** Setting permissions for individual event types"
-    EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add ' $LAM_DEPLOY_RULES))
-    for TYPE in ${PULL_TYPES[@]}
-    #remove pull events from list
-    do
-      EVENT_TYPES=( "${EVENT_TYPES[@]/$PULL_TYPE}" )
-    done
-    echo "Event types to process : ${EVENT_TYPES[@]}"
-    for TYPE in ${EVENT_TYPES[@]}
-    do
-      if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]==$name)')" = "false" ]; then
-        echo "No invoke permissions found for event type $TYPE"
-        echo "*** Applying invoke permissions"
-        #S3 permissions use source account
-        if [ ${TYPE} = "s3" ]; then
-          PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-account ${ACCOUNT_NUMBER} --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
-        else
-          PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
-        fi
-        if [ $? -eq 0 ]; then
-          echo "Succesffully added invoke permissions for $TYPE"
-        else
-          echo "ERROR - failed to add invoke permissions for event type $TYPE to $PROD_ARN"
-          RETCODE=1
-          break
-        fi
-      else
-        echo "$TYPE permissions found, no action necessary"
-      fi
-    done
-  fi
-
   if [ $RETCODE -eq 0 ]; then
     echo "*** Checking for event sources in configuration files"
     jq -e '. | has("events")' $LAM_DEPLOY_RULES >/dev/null
     HAS_EVENTS=$?
     if [ $HAS_EVENTS -eq 0 ]; then
       LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
+        # ***** Permissions
       if [ $LENGTH -ne 0 ]; then
-        echo "Event sources found"
-        echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
-        for((i=0;i<$LENGTH;i++))
-        do
-          TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
-          SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
-          PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
+        echo "*** Retrieving event policy"
+        PERMISSION_CHECK=$(aws --region ${REGION} lambda get-policy --function-name ${FUNCTION_NAME}:PROD 2> /dev/null)
+        PERMISSION_RESULT=$?
 
-          if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
-            echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
-            ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
-            if [ $? -ne 0 ]; then
+        echo "*** Setting permissions for individual event types"
+        EVENT_TYPES=($(jq -r '[.["events"][]["type"]] | unique | map("\(.) ") | add ' $LAM_DEPLOY_RULES))
+        for TYPE in ${PULL_TYPES[@]}
+        #remove pull events from list
+        do
+          EVENT_TYPES=( "${EVENT_TYPES[@]/$PULL_TYPE}" )
+        done
+        echo "Event types to process : ${EVENT_TYPES[@]}"
+        for TYPE in ${EVENT_TYPES[@]}
+        do
+          if [ $PERMISSION_RESULT -ne 0 ] || [ "$(echo $PERMISSION_CHECK | jq  -r '.["Policy"]' | jq '.["Statement"]'| jq -e --arg name "${TYPE}_invoke" 'any(.["Sid"]==$name)')" = "false" ]; then
+            echo "No invoke permissions found for event type $TYPE"
+            echo "*** Applying invoke permissions"
+            #S3 permissions use source account
+            if [ ${TYPE} = "s3" ]; then
+              PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-account ${ACCOUNT_NUMBER} --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+            else
+              PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+            fi
+            if [ $? -eq 0 ]; then
+              echo "Succesffully added invoke permissions for $TYPE"
+            else
+              echo "ERROR - failed to add invoke permissions for event type $TYPE to $PROD_ARN"
               RETCODE=1
               break
             fi
           else
-            echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
-            RETCODE=1
-            break
+            echo "$TYPE permissions found, no action necessary"
           fi
         done
 
         if [ $RETCODE -eq 0 ]; then
-          echo -e "\nSuccessfully created all event sources"
+          echo "Event sources found"
+          echo "*** Retrieving and processing event sources from ${LAM_DEPLOY_RULES}"
+          for((i=0;i<$LENGTH;i++))
+          do
+            TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
+            SRC=$(jq -r --arg i $i '.["events"]['$i']["src"]' $LAM_DEPLOY_RULES)
+            PARAMETER=$(jq -r --arg i $i '.["events"]['$i']["parameter"]' $LAM_DEPLOY_RULES)
+
+            if [ -e ${BUILD_PATH}/${SRC} ] || [ "$SRC" = "''" ]; then
+              echo -e "\n*** Executing script for event source $TYPE (./event-scripts/${TYPE}_event_source.sh)"
+              ${SCRIPT_PATH}/event-scripts/${TYPE}_event_source.sh "${BUILD_PATH}/${SRC}" "${PROD_ARN}" "${REGION}" "${PARAMETER}"
+              if [ $? -ne 0 ]; then
+                RETCODE=1
+                break
+              fi
+            else
+              echo "ERROR - $TYPE event source not found (${BUILD_PATH}/${SRC})"
+              RETCODE=1
+              break
+            fi
+          done
+
+          if [ $RETCODE -eq 0 ]; then
+            echo -e "\nSuccessfully created all event sources"
+          fi
         fi
       fi
-    fi
-
+    fi  
     if [ $HAS_EVENTS -eq 1 ] || [ $LENGTH -eq 0 ]; then
         echo "No event sources found"
     fi
