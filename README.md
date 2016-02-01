@@ -4,7 +4,7 @@ Lambda-promotion is a shell script tool that uses the aws cli to automate the pr
 
 ## What does it do?
 
-The lambda-promotion will create and/or update a lambda function and it's associated dependencies based information supplied in json configuration files.  Unique IAM roles and policies are created for each function.  It also manages function versioning using the alias functionality provided by AWS Lambda.
+The lambda-promotion tool will create and/or update a lambda function and it's associated dependencies based information supplied in json configuration files.  Unique IAM roles and policies are created for each function.  It also manages function versioning using the alias functionality provided by AWS Lambda.
 
 ## Setup
 The lambda-promotion tool runs independently of the build process, but requires that certain artifacts are produced.
@@ -62,7 +62,7 @@ The event types and their parameters are as follows :
 s3: bucket name
 dynamodb: table name
 sns: topic Arn
-events: none 
+events: none
 
 ## Usage
 
