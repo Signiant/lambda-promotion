@@ -8,6 +8,7 @@ SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 PULL_TYPES=( dynamodb kinesis )
 
+
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
@@ -15,28 +16,43 @@ LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
 
 RETCODE=0
 
-#Check if deployment rules exist
-if [ -e "$LAM_DEPLOY_RULES" ]; then
-  echo "*** Lambda Deployment Rules found (${LAM_DEPLOY_RULES})"
-else
-  echo "*** ERROR - Lambda Deployment Rules not found (${LAM_DEPLOY_RULES})"
+#Check dependencies
+jq --version >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+  echo "*** ERROR - This script requires that jq be installed"
   RETCODE=1
 fi
 
-#Check if trust policy exists
-if [ -e "$TRUST_POLICY_SRC" ]; then
-  echo "*** Trust Policy found (${TRUST_POLICY_SRC})"
-else
-  echo "*** ERROR - Trust Policy not found (${TRUST_POLICY_SRC})"
+aws-cli -v
+if [ $? -ne 0 ]; then
+  echo "*** ERROR = This script requires that the aws-cli be installed"
   RETCODE=1
 fi
 
-#Check if inline policy exists
-if [ -e "$INLINE_POLICY_SRC" ]; then
-  echo "*** Inline Policy found ($INLINE_POLICY_SRC)"
-else
-  echo "*** ERROR - Inline Policy not found ($INLINE_POLICY_SRC)"
-  RETCODE=1
+if [ $RETCODE -eq 0 ]; then
+  #Check if deployment rules exist
+  if [ -e "$LAM_DEPLOY_RULES" ]; then
+    echo "*** Lambda Deployment Rules found (${LAM_DEPLOY_RULES})"
+  else
+    echo "*** ERROR - Lambda Deployment Rules not found (${LAM_DEPLOY_RULES})"
+    RETCODE=1
+  fi
+
+  #Check if trust policy exists
+  if [ -e "$TRUST_POLICY_SRC" ]; then
+    echo "*** Trust Policy found (${TRUST_POLICY_SRC})"
+  else
+    echo "*** ERROR - Trust Policy not found (${TRUST_POLICY_SRC})"
+    RETCODE=1
+  fi
+
+  #Check if inline policy exists
+  if [ -e "$INLINE_POLICY_SRC" ]; then
+    echo "*** Inline Policy found ($INLINE_POLICY_SRC)"
+  else
+    echo "*** ERROR - Inline Policy not found ($INLINE_POLICY_SRC)"
+    RETCODE=1
+  fi
 fi
 
 if [ $RETCODE -eq 0 ]; then
@@ -319,7 +335,7 @@ if [ $RETCODE -eq 0 ]; then
           fi
         fi
       fi
-    fi  
+    fi
     if [ $HAS_EVENTS -eq 1 ] || [ $LENGTH -eq 0 ]; then
         echo "No event sources found"
     fi
