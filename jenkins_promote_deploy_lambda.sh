@@ -23,7 +23,7 @@ if [ $? -ne 0 ]; then
   RETCODE=1
 fi
 
-aws-cli -v
+aws --version
 if [ $? -ne 0 ]; then
   echo "*** ERROR = This script requires that the aws-cli be installed"
   RETCODE=1
