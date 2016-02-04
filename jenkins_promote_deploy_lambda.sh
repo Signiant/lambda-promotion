@@ -17,9 +17,9 @@ LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
 RETCODE=0
 
 #Check dependencies
-jq --version >/dev/null 2>&1
+echo $(jq --version | cut -d '-' -f2) 1.5 | awk '{exit $1 >= $2 ? 0 : 1}'
 if [ $? -ne 0 ]; then
-  echo "*** ERROR - This script requires that jq be installed"
+  echo "*** ERROR - This script requires jq version 1.5 or greater"
   RETCODE=1
 fi
 
