@@ -29,7 +29,7 @@ if [ $RETCODE -eq 0 ]; then
   REGION=$(jq -r '.["region"]' $LAM_DEPLOY_RULES)
   echo "REGION set to $REGION"
   FUNCTION_NAME=$(jq -r '.["name"]' $LAM_DEPLOY_RULES)
-  ALIASED_NAME=${FUNCTION_NAME}:PROD
+  ALIASED_NAME="${FUNCTION_NAME}:PROD"
   echo "FUNCTION_NAME set to $FUNCTION_NAME"
 fi
 
@@ -40,7 +40,6 @@ if [ $RETCODE -eq 0 ]; then
   if [ $? -eq 0 ]; then
     FUNCTION_ARN=$(echo $FUNCTION_RESPONSE | jq -r '.["Configuration"]["FunctionArn"]')
     echo "FUNCTION_ARN set to $FUNCTION_ARN"
-
     FUNCTION_ARN_SPLIT=(${FUNCTION_ARN//:/ })
     ACCOUNT_NUMBER=${FUNCTION_ARN_SPLIT[4]}
     echo "ACCOUNT_NUMBER SET TO $ACCOUNT_NUMBER"
