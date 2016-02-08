@@ -61,7 +61,7 @@ The parameter key identifies an additional parameter required for some event-typ
 The event types and their parameters are as follows :
 s3: bucket name
 dynamodb: table name
-sns: topic Arn
+sns: topic name
 events: none
 
 ## Usage
