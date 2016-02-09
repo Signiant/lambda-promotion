@@ -20,7 +20,7 @@ if [ ${#RULE_NAME} -gt 64 ]; then
   echo "RULE_NAME exceeds the maximum length of 64 characters and will be truncated"
 fi
 echo "*** Replacing rule name in json file"
-cat $EVENT_SRC | jq --arg NAME $RULE_NAME '.["Name"]=$NAME' > /tmp/events_event.$$
+jq --arg NAME $RULE_NAME '.["Name"]=$NAME' $EVENT_SRC > /tmp/events_event.$$
 if [ -s /tmp/events_event.$$ ]; then
   echo "RULE_NAME set to $RULE_NAME"
   TMP_PATH=/tmp/events_event.$$

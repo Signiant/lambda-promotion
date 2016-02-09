@@ -26,7 +26,7 @@ fi
 
 if [ $RETCODE -eq 0 ]; then
   echo "*** Updating event json file ($EVENT_SRC) with function and stream arn"
-  cat $EVENT_SRC | jq --arg FUNCTION $FUNCTION_ARN --arg STREAM $STREAM_ARN '.["FunctionName"]=$FUNCTION | .["EventSourceArn"]=$STREAM' > /tmp/s3_event.$$
+  jq --arg FUNCTION $FUNCTION_ARN --arg STREAM $STREAM_ARN '.["FunctionName"]=$FUNCTION | .["EventSourceArn"]=$STREAM' $EVENT_SRC > /tmp/s3_event.$$
 
   if [ -s /tmp/s3_event.$$ ]; then
     echo "Successfully updated function arn and event source arn in event source json file"

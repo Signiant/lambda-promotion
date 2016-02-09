@@ -10,7 +10,7 @@ RETCODE=0
 #say whats happening
 #Insert function arn in event json file
 echo "*** Updating event json file ($EVENT_SRC) with function arn ($FUNCTION_ARN)"
-cat $EVENT_SRC | jq --arg ARN $FUNCTION_ARN '.["LambdaFunctionConfigurations"][]["LambdaFunctionArn"]=$ARN' > /tmp/s3_event.$$
+jq --arg ARN $FUNCTION_ARN '.["LambdaFunctionConfigurations"][]["LambdaFunctionArn"]=$ARN' $EVENT_SRC> /tmp/s3_event.$$
 if [ -s /tmp/s3_event.$$ ]; then
   echo "Successfully set function arn in event source json file"
   mv /tmp/s3_event.$$ $EVENT_SRC
