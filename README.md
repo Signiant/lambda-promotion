@@ -32,7 +32,7 @@ Proper policy document can be generated using the [AWS Policy Generator](http://
 You may wish to run tests against the function to verify that it is ready for promotion.  This can be done by including a tests.lam.json in the deploy directory.  This file is optional, and contains an array of event objects to test the lambda function with.  If any of these events fail, the alias will not move to the new function version, and the promotion process will exit, noting the function version, error, and response.
 
 The template for a tests.lam.json file can be found in templates/lambda.json.  Simple add an object to the "events" array for each test you would like to run.
- 
+
 #### Source code
 
 ![Source Code Artifacts](/images/source-artifacts.png?raw=true)
@@ -77,6 +77,10 @@ The lambda-promotion tool requires two arguments, the path to the build director
 lambda-promotion < build-path > < environment >
 
 lambda-promotion /Users/example/Projects/LambdaProject/build dev
+
+## Monitoring
+
+Under Construction...
 
 ## Dependencies
 This tool requires that these cli utilities be installed :  
