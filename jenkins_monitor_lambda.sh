@@ -113,12 +113,12 @@ if [ $RETCODE -eq 0 ]; then
     TOPIC_CREATE=$(aws sns create-topic --name ${TOPIC_NAME})
     if [ $? -eq 0 ]; then
       echo "Successfully created SNS topic"
-      echo "*** Creating topic subscription for VictorOps endpoint ${ENDPOINT_URL}"
+      echo "*** Creating topic subscription for endpoint ${ENDPOINT_URL}"
       TOPIC_SUBSCRIBE=$(aws sns subscribe --topic-arn ${TOPIC_ARN} --protocol https --notification-endpoint ${ENDPOINT_URL})
       if [ $? -eq 0 ]; then
-        echo "Successfully subscribed VictorOps to topic"
+        echo "Successfully subscribed to topic"
       else
-        echo "ERROR - Unable to create subscription for VictorOps endpoint ${ENDPOINT_URL} to topic ${TOPIC_ARN}"
+        echo "ERROR - Unable to create subscription for endpoint ${ENDPOINT_URL} to topic ${TOPIC_ARN}"
         RETCODE=1
       fi
     else
@@ -127,7 +127,6 @@ if [ $RETCODE -eq 0 ]; then
     fi
   fi
 fi
-
 
 
 if [ $RETCODE -eq 0 ]; then
