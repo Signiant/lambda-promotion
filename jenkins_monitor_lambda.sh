@@ -5,8 +5,8 @@
 
 BUILD_PATH=$1
 ENVIRONMENT=$2
-TRIGGER_VALUE=$3
-ENDPOINT_URL=$4
+ENDPOINT_URL=$3
+THRESHOLD_VALUE=$4
 
 
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
@@ -141,7 +141,7 @@ if [ $RETCODE -eq 0 ]; then
     --dimensions Name="FunctionName",Value="${FUNCTION_NAME}" Name="Resource",Value="${ALIASED_NAME}" \
     --period 60 \
     --evaluation-periods 1 \
-    --threshold ${TRIGGER_VALUE} \
+    --threshold ${THRESHOLD_VALUE} \
     --comparison-operator GreaterThanOrEqualToThreshold \
   )
   if [ $? -eq 0 ]; then
