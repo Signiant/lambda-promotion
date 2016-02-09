@@ -59,7 +59,7 @@ fi
 if [ $RETCODE -eq 0 ]; then
   echo "*** Creating cloudwatch alarm for Error metric"
   ALARM_RESPONSE=$( \
-    aws cloudwatch put-metric-alarm \
+    aws --region ${REGION} cloudwatch put-metric-alarm \
     --alarm-name Lambda_${FUNCTION_NAME}-${REGION}-errors \
     --actions-enabled \
     --alarm-actions arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:Lambda-Monitoring-Signiant \
@@ -83,7 +83,7 @@ fi
 if [ $RETCODE -eq 0 ]; then
   #Ensure Custom Metric exists
   METRIC_RESPONSE=$( \
-    aws cloudwatch put-metric-data \
+    aws --region ${REGION} cloudwatch put-metric-data \
     --namespace 'Lambda' \
     --metric-name PercentFailure \
     --unit Percent \
@@ -104,17 +104,17 @@ if [ $RETCODE -eq 0 ]; then
   TOPIC_NAME="Lambda-Notify-VictorOps_${FUNCTION_NAME}"
   TOPIC_ARN="arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:${TOPIC_NAME}"
   echo $TOPIC_ARN
-  TOPIC_RESPONSE=$(aws sns get-topic-attributes --topic-arn ${TOPIC_ARN} 2> /dev/null)
+  TOPIC_RESPONSE=$(aws --region ${REGION} sns get-topic-attributes --topic-arn ${TOPIC_ARN} 2> /dev/null)
   if [ $? -eq 0 ]; then
     echo "SNS topic found"
   else
     echo "No SNS topic found"
     echo "*** Creating SNS topic $TOPIC_NAME"
-    TOPIC_CREATE=$(aws sns create-topic --name ${TOPIC_NAME})
+    TOPIC_CREATE=$(aws --region ${REGION} sns create-topic --name ${TOPIC_NAME})
     if [ $? -eq 0 ]; then
       echo "Successfully created SNS topic"
       echo "*** Creating topic subscription for endpoint ${ENDPOINT_URL}"
-      TOPIC_SUBSCRIBE=$(aws sns subscribe --topic-arn ${TOPIC_ARN} --protocol https --notification-endpoint ${ENDPOINT_URL})
+      TOPIC_SUBSCRIBE=$(aws --region ${REGION} sns subscribe --topic-arn ${TOPIC_ARN} --protocol https --notification-endpoint ${ENDPOINT_URL})
       if [ $? -eq 0 ]; then
         echo "Successfully subscribed to topic"
       else
