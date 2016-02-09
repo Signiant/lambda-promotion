@@ -5,13 +5,19 @@
 
 BUILD_PATH=$1
 ENVIRONMENT=$2
-TRIGGER_VALUE=50
-#Might not need
-SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+TRIGGER_VALUE=$3
+ENDPOINT_URL=$4
+
 
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
 
 RETCODE=0
+
+echo
+echo "***********************************************************************"
+echo "************************** MONITORING *********************************"
+echo "***********************************************************************"
+echo
 
 if [ $RETCODE -eq 0 ]; then
   #Check if deployment rules exist
@@ -92,20 +98,51 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
-#What is dynamic? periods? Threshold?
+if [ $RETCODE -eq 0 ]; then
+  echo -e "\n*** Checking for SNS topic"
+  #construct topic Arn
+  TOPIC_NAME="Lambda-Notify-VictorOps_${FUNCTION_NAME}"
+  TOPIC_ARN="arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:${TOPIC_NAME}"
+  echo $TOPIC_ARN
+  TOPIC_RESPONSE=$(aws sns get-topic-attributes --topic-arn ${TOPIC_ARN} 2> /dev/null)
+  if [ $? -eq 0 ]; then
+    echo "SNS topic found"
+  else
+    echo "No SNS topic found"
+    echo "*** Creating SNS topic $TOPIC_NAME"
+    TOPIC_CREATE=$(aws sns create-topic --name ${TOPIC_NAME})
+    if [ $? -eq 0 ]; then
+      echo "Successfully created SNS topic"
+      echo "*** Creating topic subscription for VictorOps endpoint ${ENDPOINT_URL}"
+      TOPIC_SUBSCRIBE=$(aws sns subscribe --topic-arn ${TOPIC_ARN} --protocol https --notification-endpoint ${ENDPOINT_URL})
+      if [ $? -eq 0 ]; then
+        echo "Successfully subscribed VictorOps to topic"
+      else
+        echo "ERROR - Unable to create subscription for VictorOps endpoint ${ENDPOINT_URL} to topic ${TOPIC_ARN}"
+        RETCODE=1
+      fi
+    else
+      echo "ERROR - Unable to create SNS topic $TOPIC_NAME"
+      RETCODE=1
+    fi
+  fi
+fi
+
+
+
 if [ $RETCODE -eq 0 ]; then
   echo "*** Creating cloudwatch alarm for PercentFailure metric"
   ALARM_RESPONSE=$( \
-    aws cloudwatch put-metric-alarm \
+    aws --region ${REGION} cloudwatch put-metric-alarm \
     --alarm-name Lambda_${FUNCTION_NAME}-${REGION}-percentfailure \
-    --alarm-actions arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:Lambda-Monitoring-Signiant-Trigger \
+    --alarm-actions ${TOPIC_ARN} \
     --metric-name PercentFailure \
     --namespace Lambda \
     --statistic Maximum \
     --dimensions Name="FunctionName",Value="${FUNCTION_NAME}" Name="Resource",Value="${ALIASED_NAME}" \
     --period 60 \
     --evaluation-periods 1 \
-    --threshold 50 \
+    --threshold ${TRIGGER_VALUE} \
     --comparison-operator GreaterThanOrEqualToThreshold \
   )
   if [ $? -eq 0 ]; then
