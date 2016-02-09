@@ -12,7 +12,7 @@ PULL_TYPES=( dynamodb kinesis )
 TRUST_POLICY_SRC=${SCRIPT_PATH}/json/trust_policy.json
 INLINE_POLICY_SRC=${BUILD_PATH}/deploy/policy.lam.json
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
-
+TEST_EVENT_SRC=${BUILD_PATH}/deploy/tests.lam.json
 
 RETCODE=0
 
@@ -202,7 +202,6 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
-# Test function here eventually
 
 #*************************Version
 if [ $RETCODE -eq 0 ]; then
@@ -217,6 +216,40 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
+#*************************Testing
+if [ $RETCODE -eq 0 ]; then
+  echo -e  "\n*** Checking for test events"
+
+  TESTS_LENGTH=$(jq '.["events"] | length' ${TEST_EVENT_SRC} 2> /dev/null)
+  if [ -e "${TEST_EVENT_SRC}" ] && [ $TESTS_LENGTH -gt 0 ]; then
+    echo "*** Testing function with event(s) from $TEST_EVENT_SRC"
+    for(( i=0; i<$TESTS_LENGTH; i++ ))
+    do
+      TEST_RETURN_PATH=/tmp/result-${i}.$$.json
+      PAYLOAD_PATH=/tmp/payload.$$.json
+      jq --argjson i $i '.["events"][$i]' ${TEST_EVENT_SRC} > ${PAYLOAD_PATH}
+      TEST_RESPONSE=$(aws --region ${REGION} lambda invoke --function-name ${FUNCTION_NAME}:${FUNCTION_VERSION} --payload file://${PAYLOAD_PATH} ${TEST_RETURN_PATH})
+      if [ "$(echo $TEST_RESPONSE | jq 'has("FunctionError")')" = "false" ]; then
+        echo "Test successful"
+        echo "Function response: "
+        echo $TEST_RESPONSE
+        rm ${TEST_RETURN_PATH} | rm ${PAYLOAD_PATH}
+      else
+        echo -e "ERROR - Test failed for new version $FUNCTION_VERSION \nFunction Error : \n$(echo $TEST_RESPONSE | jq '.["FunctionError"]')"
+        RETCODE=1
+        if [ -s ${TEST_RETURN_PATH} ]; then
+          echo "Function response: "
+          cat ${TEST_RETURN_PATH}
+          echo ""
+          rm ${TEST_RETURN_PATH} | rm ${PAYLOAD_PATH}
+        fi
+        break
+      fi
+    done
+  else
+    echo "No tests to run"
+  fi
+fi
 
 #************************Aliasing
 if [ $RETCODE -eq 0 ]; then
