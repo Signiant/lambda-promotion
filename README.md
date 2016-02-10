@@ -74,7 +74,7 @@ events: none
 
 This tool uses the [lambda-metrics](https://github.com/Signiant/lambda-metrics) function for monitoring.  This Lambda function must be setup on the same environment as any Lambda functions you wish to monitor.
 
-The lambda-monitor.sh script can be run after the promotion of a function to enable monitoring.  Monitoring a function watches a custom percent-failure metric (calculated for the last 5 minutes), and triggers a notification to an https endpoint if it reaches or exceeds a threshold. This monitoring is performed uses CloudWatch alarms and SNS topics, as well as a dedicated Lambda function.
+The lambda-monitor.sh script can be run after the promotion of a function to enable monitoring.  Monitoring a function tracks a custom percent-failure metric (calculated for the last 5 minutes), and triggers a notification to an https endpoint if it reaches or exceeds a threshold. Two Cloudwatch alarms and one SNS topic are created for each function.
 
 ## Usage
 
