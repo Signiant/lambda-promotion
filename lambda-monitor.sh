@@ -7,7 +7,7 @@ BUILD_PATH=$1
 ENVIRONMENT=$2
 ENDPOINT_URL=$3
 THRESHOLD_VALUE=$4
-
+ORIGIN_TOPIC_NAME=$5
 
 LAM_DEPLOY_RULES=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}.lam.json
 
@@ -62,7 +62,7 @@ if [ $RETCODE -eq 0 ]; then
     aws --region ${REGION} cloudwatch put-metric-alarm \
     --alarm-name Lambda_${FUNCTION_NAME}-${REGION}-errors \
     --actions-enabled \
-    --alarm-actions arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:Lambda-Monitoring-Signiant \
+    --alarm-actions arn:aws:sns:${REGION}:${ACCOUNT_NUMBER}:${ORIGIN_TOPIC_NAME} \
     --metric-name Errors \
     --namespace AWS/Lambda \
     --statistic Sum \
