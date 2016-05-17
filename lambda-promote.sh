@@ -179,7 +179,7 @@ if [ $RETCODE -eq 0 ]; then
     fi
     if [ $RETCODE -eq 0 ]; then
       echo "*** Updating configuration for function ${FUNCTION_NAME}"
-      FUNCTION_CONFIG_RESPONSE=$(aws --region ${REGION} lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER})
+      FUNCTION_CONFIG_RESPONSE=$(aws --region ${REGION} lambda update-function-configuration --function-name ${FUNCTION_NAME} --timeout ${TIMEOUT} --memory-size ${MEMORY_SIZE} --description "${DESCRIPTION}" --role ${ROLE} --handler ${HANDLER} --runtime ${RUNTIME})
       if [ $? -eq 0 ]; then
         echo "Successfully updated function configuration"
       else
