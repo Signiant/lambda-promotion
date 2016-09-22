@@ -89,6 +89,14 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
+# Need some info on the role even if we are not creating it
+echo "*** Setting ROLE_NAME and POLICY_NAME"
+ROLE_NAME="${FUNCTION_NAME}_role"
+echo "ROLE_NAME set to $ROLE_NAME"
+
+echo "*** Checking IAM for role $ROLE_NAME"
+ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME} 2> /dev/null)
+
 if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo
   echo "***********************************************************************"
@@ -96,9 +104,6 @@ if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo "***********************************************************************"
   echo
 
-  echo "*** Setting ROLE_NAME and POLICY_NAME"
-  ROLE_NAME="${FUNCTION_NAME}_role"
-  echo "ROLE_NAME set to $ROLE_NAME"
   POLICY_NAME="${FUNCTION_NAME}_policy"
   echo -e "POLICY_NAME set to $POLICY_NAME\n"
 
@@ -150,7 +155,7 @@ if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   fi
 fi
 
-if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
+if [ $RETCODE -eq 0 ]; then
   echo "*** Setting ROLE to role arn"
   ROLE=$(echo ${ROLE_RESP} | jq -r '.["Role"]["Arn"]')
   echo "ROLE set to ${ROLE}"
