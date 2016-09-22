@@ -4,6 +4,7 @@
 
 BUILD_PATH=$1
 ENVIRONMENT=$2
+CREATE_ROLE=$3
 SCRIPT_PATH="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 PULL_TYPES=( dynamodb kinesis )
@@ -88,7 +89,7 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
-if [ $RETCODE -eq 0 ]; then
+if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo
   echo "***********************************************************************"
   echo "****************** ROLES AND POLICIES *********************************"
@@ -137,7 +138,7 @@ if [ $RETCODE -eq 0 ]; then
 fi
 
 #******** UPDATE INLINE POLICY
-if [ $RETCODE -eq 0 ]; then
+if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo "*** Applying inline policy $POLICY_NAME to role $ROLE_NAME"
   POLICY_RESPONSE=$(aws --region ${REGION} iam put-role-policy --role-name $ROLE_NAME --policy-name $POLICY_NAME --policy-document file://${INLINE_POLICY_SRC})
 
@@ -149,7 +150,7 @@ if [ $RETCODE -eq 0 ]; then
   fi
 fi
 
-if [ $RETCODE -eq 0 ]; then
+if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo "*** Setting ROLE to role arn"
   ROLE=$(echo ${ROLE_RESP} | jq -r '.["Role"]["Arn"]')
   echo "ROLE set to ${ROLE}"
