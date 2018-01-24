@@ -17,6 +17,15 @@ TEST_EVENT_SRC=${BUILD_PATH}/deploy/tests.lam.json
 
 RETCODE=0
 
+#Check if we have an environment specific IAM policy
+ENV_INLINE_POLICY_SOURCE=${BUILD_PATH}/deploy/environments/${ENVIRONMENT}-policy.lam.json
+if [ -e "${ENV_INLINE_POLICY_SOURCE}" ]; then
+  echo "Environment specific IAM policy found at ${ENV_INLINE_POLICY_SOURCE} - using"
+  INLINE_POLICY_SRC=${ENV_INLINE_POLICY_SOURCE}
+else
+  echo "No envirionment specific IAM policy found - using default at ${INLINE_POLICY_SRC}"
+fi
+
 #Check dependencies
 echo $(jq --version | cut -d '-' -f2) 1.5 | awk '{exit $1 >= $2 ? 0 : 1}'
 if [ $? -ne 0 ]; then
