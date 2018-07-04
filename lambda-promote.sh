@@ -106,7 +106,7 @@ echo "ROLE_NAME set to $ROLE_NAME"
 echo "*** Checking IAM for role $ROLE_NAME"
 ROLE_RESP=$(aws --region ${REGION} iam get-role --role-name ${ROLE_NAME} 2> /dev/null)
 
-if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
+if [ $RETCODE -eq 0 ] && [ ! -z ${CREATE_ROLE} ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo
   echo "***********************************************************************"
   echo "****************** ROLES AND POLICIES *********************************"
@@ -152,7 +152,7 @@ if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
 fi
 
 #******** UPDATE INLINE POLICY
-if [ $RETCODE -eq 0 ] && [ ${CREATE_ROLE,,} != 'false' ]; then
+if [ $RETCODE -eq 0 ] && [ ! -z ${CREATE_ROLE} ] && [ ${CREATE_ROLE,,} != 'false' ]; then
   echo "*** Applying inline policy $POLICY_NAME to role $ROLE_NAME"
   POLICY_RESPONSE=$(aws --region ${REGION} iam put-role-policy --role-name $ROLE_NAME --policy-name $POLICY_NAME --policy-document file://${INLINE_POLICY_SRC})
 
