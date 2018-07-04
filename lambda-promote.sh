@@ -340,6 +340,34 @@ if [ $RETCODE -eq 0 ]; then
             #S3 permissions use source account
             if [ ${TYPE} = "s3" ]; then
               PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-account ${ACCOUNT_NUMBER} --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+            elif [ ${TYPE} = "sns" ]; then
+              # Always add an invoke permission for this region...
+              echo "Adding invoke policy for SNS in ${REGION}"
+              PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+
+              # Now check if we need to allow invocation from other regions in the config...
+              LENGTH=$(jq '.["events"] | length' ${LAM_DEPLOY_RULES})
+
+              for((i=0;i<$LENGTH;i++))
+              do
+                EVENT_TYPE=$(jq -r --arg i $i '.["events"]['$i']["type"]' $LAM_DEPLOY_RULES)
+                HAVE_REGIONS=$(jq -c -r --arg i $i '.["events"]['$i']["regions"]' $LAM_DEPLOY_RULES)
+
+                if [ "${HAVE_REGIONS}" != "null" ]; then
+                  echo "Regions specified - creating invoke policies for each region"
+                  EVENT_REGIONS=$(jq -c -r --arg i $i '.["events"]['$i']["regions"][]' $LAM_DEPLOY_RULES)
+                fi
+
+                if [ $EVENT_TYPE = "sns" ]; then
+                  for EVENT_REGION in ${EVENT_REGIONS[@]}
+                  do
+                    if [ "${EVENT_REGION}" != "${REGION}" ]; then
+                      echo "Adding invoke policy for SNS in ${EVENT_REGION}"
+                      PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke_${EVENT_REGION}" --source-arn arn:aws:${TYPE}:${EVENT_REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
+                    fi
+                  done
+                fi
+              done
             else
               PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
             fi
