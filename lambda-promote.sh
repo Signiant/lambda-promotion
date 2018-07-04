@@ -23,7 +23,7 @@ if [ -e "${ENV_INLINE_POLICY_SOURCE}" ]; then
   echo "Environment specific IAM policy found at ${ENV_INLINE_POLICY_SOURCE} - using"
   INLINE_POLICY_SRC=${ENV_INLINE_POLICY_SOURCE}
 else
-  echo "No envirionment specific IAM policy found - using default at ${INLINE_POLICY_SRC}"
+  echo "No environment specific IAM policy found - using default at ${INLINE_POLICY_SRC}"
 fi
 
 #Check dependencies
@@ -372,7 +372,7 @@ if [ $RETCODE -eq 0 ]; then
               PERMISSION_ADD=$(aws --region ${REGION} lambda add-permission --function-name ${FUNCTION_NAME} --statement-id "${TYPE}_invoke" --source-arn arn:aws:${TYPE}:${REGION}:${ACCOUNT_NUMBER}:* --action "lambda:InvokeFunction" --principal "${TYPE}.amazonaws.com" --qualifier PROD)
             fi
             if [ $? -eq 0 ]; then
-              echo "Succesffully added invoke permissions for $TYPE"
+              echo "Succesfully added invoke permissions for $TYPE"
             else
               echo "ERROR - failed to add invoke permissions for event type $TYPE to $PROD_ARN"
               RETCODE=1
